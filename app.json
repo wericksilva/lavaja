@@ -1,0 +1,21 @@
+{
+  "expo": {
+    "name": "LavaJá",
+    "slug": "lavaja",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#F4F8FC"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F4F8FC"
+      },
+      "edgeToEdgeEnabled": true
+    }
+  }
+}
