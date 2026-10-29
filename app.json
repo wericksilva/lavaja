@@ -5,6 +5,9 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "experiments": {
+      "baseUrl": "/lavaja"
+    },
     "splash": {
       "backgroundColor": "#F4F8FC"
     },
@@ -16,6 +19,9 @@
         "backgroundColor": "#F4F8FC"
       },
       "edgeToEdgeEnabled": true
-    }
+    },
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
