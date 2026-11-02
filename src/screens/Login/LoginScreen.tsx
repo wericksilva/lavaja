@@ -25,6 +25,7 @@ email: string;
   showHome: () => void;
 };
 
+
 export default function LoginScreen({ email, setEmail, password, setPassword, login, navigate, showHome }: Props) {
   return (
   <SafeAreaView style={styles.safe}>
