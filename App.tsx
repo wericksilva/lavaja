@@ -10,6 +10,7 @@ import ScheduleScreen from './src/screens/Schedule/ScheduleScreen';
 import PaymentScreen from './src/screens/Payment/PaymentScreen';
 import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
 import OrdersScreen from './src/screens/Orders/OrdersScreen';
+import ProfileScreen from './src/screens/Profile/ProfileScreen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
@@ -63,8 +64,24 @@ export default function App() {
   };
 
   switch (screen) {
-    case 'orders':
-  return <OrdersScreen navigate={setScreen} />;
+    
+   case 'orders':
+      return <OrdersScreen navigate={setScreen} />;
+
+    case 'profile':
+      return (
+        <ProfileScreen
+          name={name}
+          setName={setName}
+          email={email}
+          setEmail={setEmail}
+          phone={phone}
+          setPhone={setPhone}
+          address={address}
+          setAddress={setAddress}
+          navigate={setScreen}
+        />
+      );
     case 'login':
       return (
         <LoginScreen

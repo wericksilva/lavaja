@@ -5,6 +5,7 @@ export type Screen =
   | 'register'
   | 'home'
   | 'orders'
+  | 'profile'
   | 'schedule'
   | 'payment'
   | 'confirmation';
