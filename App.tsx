@@ -1,5 +1,7 @@
+
 import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
+
 import type { Screen, Service, PaymentMethod } from './src/types';
 import { services } from './src/data/services';
 
@@ -11,51 +13,85 @@ import PaymentScreen from './src/screens/Payment/PaymentScreen';
 import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
 import OrdersScreen from './src/screens/Orders/OrdersScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
+import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScreen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+
   const [address, setAddress] = useState('');
   const [service, setService] = useState<Service>('Lavagem e dobra');
   const [date, setDate] = useState('Hoje, 29 out.');
   const [time, setTime] = useState('14h–16h');
+
   const [payment, setPayment] = useState<PaymentMethod>('Pix');
   const [instructions, setInstructions] = useState('');
+
   const [orderNumber] = useState('LJ-2048');
 
-  const selectedService = services.find((item) => item.name === service) || services[0];
-  const total = useMemo(() => selectedService.price + 8.90, [selectedService]);
+  const selectedService =
+    services.find((item) => item.name === service) || services[0];
 
+  const total = useMemo(
+    () => selectedService.price + 8.90,
+    [selectedService]
+  );
+
+  // LOGIN
   const login = () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Falta preencher', 'Informe seu e-mail e sua senha para continuar.');
+      Alert.alert(
+        'Falta preencher',
+        'Informe seu e-mail e sua senha para continuar.'
+      );
       return;
     }
+
     setName(name || 'Cliente');
     setScreen('home');
   };
 
+  // CADASTRO
   const register = () => {
-    if (!name.trim() || !email.trim() || !phone.trim() || !password.trim()) {
-      Alert.alert('Falta preencher', 'Preencha nome, e-mail, telefone e senha.');
+    if (
+      !name.trim() ||
+      !email.trim() ||
+      !phone.trim() ||
+      !password.trim()
+    ) {
+      Alert.alert(
+        'Falta preencher',
+        'Preencha nome, e-mail, telefone e senha.'
+      );
       return;
     }
+
     setScreen('home');
   };
 
+  // CONTINUAR PARA PAGAMENTO
   const continueToPayment = () => {
     if (!address.trim()) {
-      Alert.alert('Endereço necessário', 'Informe o endereço de coleta para continuar.');
+      Alert.alert(
+        'Endereço necessário',
+        'Informe o endereço de coleta para continuar.'
+      );
       return;
     }
+
     setScreen('payment');
   };
 
-  const confirmOrder = () => setScreen('confirmation');
+  // CONFIRMAR PEDIDO
+  const confirmOrder = () => {
+    setScreen('confirmation');
+  };
 
+  // NOVO PEDIDO
   const resetOrder = () => {
     setService('Lavagem e dobra');
     setAddress('');
@@ -64,10 +100,27 @@ export default function App() {
   };
 
   switch (screen) {
-    
-   case 'orders':
-      return <OrdersScreen navigate={setScreen} />;
 
+    // RECUPERAÇÃO DE SENHA
+    case 'forgotPassword':
+      return (
+        <ForgotPasswordScreen
+          onBack={() => setScreen('login')}
+          onSendRecovery={async (email) => {
+            // Integração real com serviço de recuperação
+            // será adicionada posteriormente.
+            console.log('Solicitação de recuperação:', email);
+          }}
+        />
+      );
+
+    // PEDIDOS
+    case 'orders':
+      return (
+        <OrdersScreen navigate={setScreen} />
+      );
+
+    // PERFIL
     case 'profile':
       return (
         <ProfileScreen
@@ -82,6 +135,8 @@ export default function App() {
           navigate={setScreen}
         />
       );
+
+    // LOGIN
     case 'login':
       return (
         <LoginScreen
@@ -95,6 +150,7 @@ export default function App() {
         />
       );
 
+    // CADASTRO
     case 'register':
       return (
         <RegisterScreen
@@ -111,9 +167,17 @@ export default function App() {
         />
       );
 
+    // INÍCIO
     case 'home':
-      return <HomeScreen name={name} setService={setService} navigate={setScreen} />;
+      return (
+        <HomeScreen
+          name={name}
+          setService={setService}
+          navigate={setScreen}
+        />
+      );
 
+    // AGENDAMENTO
     case 'schedule':
       return (
         <ScheduleScreen
@@ -133,6 +197,7 @@ export default function App() {
         />
       );
 
+    // PAGAMENTO
     case 'payment':
       return (
         <PaymentScreen
@@ -150,6 +215,7 @@ export default function App() {
         />
       );
 
+    // CONFIRMAÇÃO
     case 'confirmation':
       return (
         <ConfirmationScreen
@@ -164,6 +230,16 @@ export default function App() {
       );
 
     default:
-      return <LoginScreen email={email} setEmail={setEmail} password={password} setPassword={setPassword} login={login} navigate={setScreen} showHome={() => setScreen('home')} />;
+      return (
+        <LoginScreen
+          email={email}
+          setEmail={setEmail}
+          password={password}
+          setPassword={setPassword}
+          login={login}
+          navigate={setScreen}
+          showHome={() => setScreen('home')}
+        />
+      );
   }
 }
