@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -17,6 +16,8 @@ import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScr
 import TrackingScreen from './src/screens/Tracking/TrackingScreen';
 import AdminScreen from './src/screens/Admin/AdminScreen';
 
+import type { LaundryOrder } from './src/types/order';
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
 
@@ -33,32 +34,91 @@ export default function App() {
   const [payment, setPayment] = useState<PaymentMethod>('Pix');
   const [instructions, setInstructions] = useState('');
 
-  const [orderNumber] = useState('LJ-2048');
+  // O número é atualizado sempre que um novo pedido é confirmado.
+  const [orderNumber, setOrderNumber] = useState('');
 
-  // Etapa atual do acompanhamento: começa em "Lavagem".
-  const [currentStep, setCurrentStep] = useState(2);
+  // Pedidos demonstrativos iniciais.
+  const [orders, setOrders] = useState<LaundryOrder[]>([
+    {
+      id: 'LJ-2048',
+      service: 'Lavagem e dobra',
+      date: '29 out. 2026',
+      value: 48.90,
+      currentStep: 2,
+    },
+    {
+      id: 'LJ-1982',
+      service: 'Lavar e passar',
+      date: '18 out. 2026',
+      value: 68.90,
+      currentStep: 5,
+    },
+    {
+      id: 'LJ-1837',
+      service: 'Passadoria',
+      date: '05 out. 2026',
+      value: 38.90,
+      currentStep: 5,
+    },
+  ]);
+
+  const [selectedOrderId, setSelectedOrderId] = useState('LJ-2048');
+
+  const selectedOrder =
+    orders.find((order) => order.id === selectedOrderId) ?? orders[0];
 
   const selectedService =
-    services.find((item) => item.name === service) || services[0];
+    services.find((item) => item.name === service) ?? services[0];
 
   const total = useMemo(
     () => selectedService.price + 8.90,
-    [selectedService]
+    [selectedService],
   );
 
+  // Atualiza a etapa de um pedido pelo painel administrativo.
+  const updateOrderStep = (value: string) => {
+    const separatorIndex = value.lastIndexOf(':');
+
+    if (separatorIndex <= 0) {
+      return;
+    }
+
+    const id = value.slice(0, separatorIndex);
+    const newStep = Number(value.slice(separatorIndex + 1));
+
+    if (
+      !id ||
+      !Number.isInteger(newStep) ||
+      newStep < 0 ||
+      newStep > 5
+    ) {
+      return;
+    }
+    
+    setOrders((previous) =>
+      previous.map((order) =>
+        order.id === id
+          ? { ...order, currentStep: newStep }
+          : order,
+      ),
+    );
+  };
+
+  // Login demonstrativo.
   const login = () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
         'Falta preencher',
-        'Informe seu e-mail e sua senha para continuar.'
+        'Informe seu e-mail e sua senha para continuar.',
       );
       return;
     }
 
-    setName(name || 'Cliente');
+    setName((currentName) => currentName.trim() || 'Cliente');
     setScreen('home');
   };
 
+  // Cadastro demonstrativo.
   const register = () => {
     if (
       !name.trim() ||
@@ -68,7 +128,7 @@ export default function App() {
     ) {
       Alert.alert(
         'Falta preencher',
-        'Preencha nome, e-mail, telefone e senha.'
+        'Preencha nome, e-mail, telefone e senha.',
       );
       return;
     }
@@ -76,11 +136,12 @@ export default function App() {
     setScreen('home');
   };
 
+  // Valida o endereço antes de avançar para o pagamento.
   const continueToPayment = () => {
     if (!address.trim()) {
       Alert.alert(
         'Endereço necessário',
-        'Informe o endereço de coleta para continuar.'
+        'Informe o endereço de coleta para continuar.',
       );
       return;
     }
@@ -88,16 +149,39 @@ export default function App() {
     setScreen('payment');
   };
 
+  // Cria um novo pedido a cada confirmação, sem reutilizar o pedido LJ-2048.
   const confirmOrder = () => {
-    setCurrentStep(0);
+    const highestOrderNumber = orders.reduce((highest, order) => {
+      const match = order.id.match(/^LJ-(\d+)$/);
+      const number = match ? Number(match[1]) : 0;
+
+      return Math.max(highest, number);
+    }, 0);
+    
+    const newOrderNumber = `LJ-${highestOrderNumber + 1}`;
+
+    const newOrder: LaundryOrder = {
+      id: newOrderNumber,
+      service,
+      date,
+      value: total,
+      currentStep: 0,
+    };
+
+    setOrders((previous) => [newOrder, ...previous]);
+    setSelectedOrderId(newOrderNumber);
+    setOrderNumber(newOrderNumber);
     setScreen('confirmation');
   };
 
+  // Prepara os campos para uma nova solicitação.
   const resetOrder = () => {
     setService('Lavagem e dobra');
     setAddress('');
     setInstructions('');
-    setCurrentStep(0);
+    setDate('Hoje, 29 out.');
+    setTime('14h–16h');
+    setPayment('Pix');
     setScreen('home');
   };
 
@@ -106,16 +190,21 @@ export default function App() {
       return (
         <ForgotPasswordScreen
           onBack={() => setScreen('login')}
-          onSendRecovery={async (email) => {
-            console.log('Solicitação de recuperação:', email);
+          onSendRecovery={async (recoveryEmail) => {
+            // Envio demonstrativo. A integração de e-mail será feita depois.
+            console.log('Solicitação de recuperação:', recoveryEmail);
           }}
         />
       );
 
     case 'tracking':
+      if (!selectedOrder) {
+        return null;
+      }
+
       return (
         <TrackingScreen
-          currentStep={currentStep}
+          order={selectedOrder}
           onBack={() => setScreen('orders')}
         />
       );
@@ -123,15 +212,22 @@ export default function App() {
     case 'admin':
       return (
         <AdminScreen
-          currentStep={currentStep}
-          onChangeStep={setCurrentStep}
+          orders={orders}
+          onChangeOrder={updateOrderStep}
           onBack={() => setScreen('orders')}
         />
       );
 
     case 'orders':
-      return (
-        <OrdersScreen navigate={setScreen} />
+        return (
+        <OrdersScreen
+          orders={orders}
+          navigate={setScreen}
+          onTrack={(id) => {
+            setSelectedOrderId(id);
+            setScreen('tracking');
+          }}
+        />
       );
 
     case 'profile':
@@ -186,7 +282,7 @@ export default function App() {
           navigate={setScreen}
         />
       );
-
+      
     case 'schedule':
       return (
         <ScheduleScreen

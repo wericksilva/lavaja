@@ -1,4 +1,3 @@
-
 import React from 'react';
 import {
   SafeAreaView,
@@ -13,10 +12,12 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { C } from '../../constants/theme';
 import Header from '../../components/Header';
+import type { LaundryOrder } from '../../types/order';
+import { money } from '../../utils/money';
 
 type Props = {
-  currentStep: number;
-  onChangeStep: (step: number) => void;
+  orders: LaundryOrder[];
+  onChangeOrder: (id: string) => void;
   onBack: () => void;
 };
 
@@ -29,122 +30,194 @@ const steps = [
   'Pedido entregue',
 ];
 
+const getValidStep = (currentStep: number): number => {
+  if (!Number.isFinite(currentStep)) {
+    return 0;
+  }
+
+  return Math.min(
+    Math.max(Math.trunc(currentStep), 0),
+    steps.length - 1,
+  );
+};
+
 export default function AdminScreen({
-  currentStep,
-  onChangeStep,
+  orders,
+  onChangeOrder,
   onBack,
 }: Props) {
+  const activeOrders = orders.filter(
+    (order) => getValidStep(order.currentStep) < steps.length - 1,
+  ).length;
+
+  const deliveredOrders = orders.length - activeOrders;
+
   return (
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
 
-      <Header
-        title="Painel da lavanderia"
-        onBack={onBack}
-      />
+      <Header title="Painel administrativo" onBack={onBack} />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.heading}>Gerenciar pedido</Text>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.heading}>Gerenciar pedidos</Text>
+
         <Text style={styles.subtitle}>
-          Atualize a etapa conforme o serviço avança.
+          Selecione um pedido para atualizar seu andamento.
         </Text>
 
-        <View style={styles.orderCard}>
-          <Text style={styles.label}>PEDIDO</Text>
-          <Text style={styles.orderNumber}>LJ-2048</Text>
-          <Text style={styles.service}>Lavagem e dobra</Text>
+        <View style={styles.summary}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>{orders.length}</Text>
+            <Text style={styles.summaryLabel}>Pedidos</Text>
+          </View>
 
-          <View style={styles.separator} />
+          <View style={styles.summaryDivider} />
 
-          <Text style={styles.label}>STATUS ATUAL</Text>
-          <Text style={styles.currentStatus}>
-            {steps[currentStep]}
-          </Text>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>{activeOrders}</Text>
+            <Text style={styles.summaryLabel}>Em andamento</Text>
+          </View>
+
+          <View style={styles.summaryDivider} />
+
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryNumber}>{deliveredOrders}</Text>
+            <Text style={styles.summaryLabel}>Entregues</Text>
+          </View>
         </View>
+        
+        {orders.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyIcon}>
+              <Ionicons
+                name="receipt-outline"
+                size={30}
+                color={C.blue}
+              />
+            </View>
 
-        <Text style={styles.sectionTitle}>
-          Atualizar andamento
-        </Text>
+            <Text style={styles.emptyTitle}>Nenhum pedido encontrado</Text>
 
-        {steps.map((step, index) => {
-          const selected = index === currentStep;
-          const completed = index < currentStep;
+            <Text style={styles.emptyText}>
+              Quando houver pedidos cadastrados, eles aparecerão aqui para
+              você acompanhar e atualizar as etapas.
+            </Text>
+          </View>
+        ) : (
+          orders.map((order) => {
+            const currentStep = getValidStep(order.currentStep);
+            const status = steps[currentStep];
+            const isDelivered = currentStep === steps.length - 1;
 
-          return (
-            <TouchableOpacity
-              key={step}
-              activeOpacity={0.75}
-              style={[
-                styles.stepButton,
-                selected && styles.selectedStep,
-              ]}
-              onPress={() => onChangeStep(index)}
-            >
-              <View style={styles.stepIcon}>
-                <Ionicons
-                  name={
-                    completed
-                      ? 'checkmark-circle'
-                      : selected
-                      ? 'radio-button-on'
-                      : 'ellipse-outline'
-                  }
-                  size={23}
-                  color={
-                    completed
-                      ? C.green
-                      : selected
-                      ? C.blue
-                      : C.muted
-                  }
-                />
-              </View>
+            return (
+              <View key={order.id} style={styles.card}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.orderIcon}>
+                    <Ionicons
+                      name="shirt-outline"
+                      size={22}
+                      color={C.blue}
+                    />
+                  </View>
 
-              <View style={styles.stepInfo}>
-                <Text
-                  style={[
-                    styles.stepTitle,
-                    selected && styles.selectedText,
-                  ]}
-                >
-                  {step}
-                </Text>
+                  <View style={styles.orderInfo}>
+                    <Text style={styles.orderId}>Pedido {order.id}</Text>
+                    <Text style={styles.service}>{order.service}</Text>
+                  </View>
 
-                <Text style={styles.stepDescription}>
-                  {completed
-                    ? 'Etapa concluída'
-                    : selected
-                    ? 'Etapa atual do pedido'
-                    : 'Aguardando'}
-                </Text>
-              </View>
-
-              {selected && (
-                <View style={styles.currentBadge}>
-                  <Text style={styles.currentBadgeText}>
-                    ATUAL
-                  </Text>
+                  <View
+                    style={[
+                      styles.badge,
+                      isDelivered ? styles.badgeDone : styles.badgeActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.badgeText,
+                        isDelivered
+                          ? styles.badgeTextDone
+                          : styles.badgeTextActive,
+                      ]}
+                    >
+                      {isDelivered ? 'Entregue' : 'Em andamento'}
+                    </Text>
+                  </View>
                 </View>
-              )}
-            </TouchableOpacity>
-          );
-        })}
 
-        <View style={styles.warning}>
-          <Ionicons
-            name="information-circle-outline"
-            size={20}
-            color={C.blue}
-          />
-          <Text style={styles.warningText}>
-            Ao selecionar uma etapa, o acompanhamento do
-            cliente será atualizado neste aplicativo.
-          </Text>
-        </View>
+                <View style={styles.separator} />
 
-        <Text style={styles.demoNote}>
-          Painel demonstrativo. As alterações ainda não são
-          salvas em um banco de dados.
+                <View style={styles.details}>
+                  <View style={styles.stepDetail}>
+                    <Text style={styles.detailLabel}>Etapa atual</Text>
+                    <Text style={styles.detailValue}>{status}</Text>
+                  </View>
+                  
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.detailLabel}>Valor</Text>
+                    <Text style={styles.value}>{money(order.value)}</Text>
+                  </View>
+                </View>
+
+                <Text style={styles.updateLabel}>Atualizar andamento:</Text>
+
+                {steps.map((step, index) => {
+                  const selected = index === currentStep;
+                  const completed = index < currentStep;
+
+                  return (
+                    <TouchableOpacity
+                      key={`${order.id}-${index}`}
+                      activeOpacity={0.7}
+                      style={[
+                        styles.stepOption,
+                        selected && styles.stepSelected,
+                      ]}
+                      onPress={() => onChangeOrder(`${order.id}:${index}`)}
+                    >
+                      <Ionicons
+                        name={
+                          selected
+                            ? 'radio-button-on'
+                            : completed
+                              ? 'checkmark-circle'
+                              : 'ellipse-outline'
+                        }
+                        size={19}
+                        color={
+                          selected
+                            ? C.blue
+                            : completed
+                              ? C.green
+                              : C.muted
+                        }
+                      />
+
+                      <Text
+                        style={[
+                          styles.stepText,
+                          selected && styles.stepTextSelected,
+                        ]}
+                      >
+                        {step}
+                      </Text>
+
+                      {selected ? (
+                        <Text style={styles.currentText}>ATUAL</Text>
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+                 );
+          })
+        )}
+
+        <Text style={styles.note}>
+          Painel demonstrativo. As alterações ficam salvas apenas enquanto o
+          aplicativo estiver aberto.
         </Text>
       </ScrollView>
     </SafeAreaView>
@@ -168,117 +241,196 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: C.muted,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12,
+    lineHeight: 18,
     marginTop: 6,
-    marginBottom: 20,
+    marginBottom: 18,
   },
-  orderCard: {
+  summary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
     backgroundColor: C.white,
-    borderRadius: 17,
-    padding: 17,
+    borderRadius: 15,
+    paddingVertical: 17,
+    marginBottom: 18,
     borderWidth: 1,
     borderColor: C.line,
-    marginBottom: 23,
   },
-  label: {
-    color: C.muted,
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 0.6,
+  summaryItem: {
+    alignItems: 'center',
+    flex: 1,
   },
-  orderNumber: {
+  summaryNumber: {
     color: C.navy,
     fontSize: 22,
     fontWeight: '800',
-    marginTop: 5,
+  },
+  summaryLabel: {
+    color: C.muted,
+    fontSize: 10,
+    marginTop: 4,
+  },
+  summaryDivider: {
+    width: 1,
+    height: 34,
+    backgroundColor: C.line,
+  },
+  card: {
+    backgroundColor: C.white,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: C.line,
+    padding: 15,
+    marginBottom: 15,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 9,
+  },
+  orderIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: C.paleBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orderInfo: {
+    flex: 1,
+  },
+  orderId: {
+    color: C.navy,
+    fontSize: 13,
+    fontWeight: '800',
   },
   service: {
     color: C.muted,
-    fontSize: 12,
+    fontSize: 11,
     marginTop: 4,
+  },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 15,
+  },
+  badgeActive: {
+    backgroundColor: C.paleBlue,
+  },
+  badgeDone: {
+    backgroundColor: '#E7F7F1',
+  },
+  badgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+  },
+  badgeTextActive: {
+    color: C.blue,
+  },
+  badgeTextDone: {
+    color: C.green,
   },
   separator: {
     height: 1,
     backgroundColor: C.line,
-    marginVertical: 15,
+    marginVertical: 13,
   },
-  currentStatus: {
-    color: C.blue,
-    fontSize: 16,
-    fontWeight: '800',
-    marginTop: 6,
-  },
-  sectionTitle: {
-    color: C.navy,
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 12,
-  },
-  stepButton: {
+  details: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: C.white,
-    borderWidth: 1,
-    borderColor: C.line,
-    borderRadius: 13,
-    padding: 13,
-    marginBottom: 9,
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  selectedStep: {
-    borderColor: C.blue,
-    backgroundColor: C.paleBlue,
-  },
-  stepIcon: {
-    marginRight: 11,
-  },
-  stepInfo: {
+   stepDetail: {
     flex: 1,
+    paddingRight: 10,
   },
-  stepTitle: {
+  detailLabel: {
+    color: C.muted,
+    fontSize: 10,
+  },
+  detailValue: {
+    color: C.blue,
+    fontSize: 12,
+    fontWeight: '800',
+    marginTop: 5,
+  },
+  valueContainer: {
+    alignItems: 'flex-end',
+  },
+  value: {
     color: C.navy,
     fontSize: 13,
-    fontWeight: '700',
-  },
-  selectedText: {
-    color: C.blue,
-  },
-  stepDescription: {
-    color: C.muted,
-    fontSize: 10,
-    marginTop: 4,
-  },
-  currentBadge: {
-    backgroundColor: C.blue,
-    borderRadius: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 5,
-  },
-  currentBadgeText: {
-    color: C.white,
-    fontSize: 9,
     fontWeight: '800',
+    marginTop: 5,
   },
-  warning: {
+  updateLabel: {
+    color: C.navy,
+    fontSize: 12,
+    fontWeight: '800',
+    marginBottom: 9,
+  },
+  stepOption: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: 9,
-    backgroundColor: '#EDF5FF',
-    borderRadius: 13,
-    padding: 13,
-    marginTop: 12,
+    padding: 10,
+    borderRadius: 9,
+    marginBottom: 4,
   },
-  warningText: {
-    flex: 1,
+  stepSelected: {
+    backgroundColor: C.paleBlue,
+  },
+  stepText: {
     color: C.text,
     fontSize: 11,
-    lineHeight: 17,
+    flex: 1,
   },
-  demoNote: {
+  stepTextSelected: {
+    color: C.blue,
+    fontWeight: '800',
+  },
+  currentText: {
+    color: C.blue,
+    fontSize: 9,
+    fontWeight: '800',
+    },
+  emptyState: {
+    backgroundColor: C.white,
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: C.line,
+    padding: 25,
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  emptyIcon: {
+    width: 58,
+    height: 58,
+    borderRadius: 18,
+    backgroundColor: C.paleBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 13,
+  },
+  emptyTitle: {
+    color: C.navy,
+    fontSize: 14,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  emptyText: {
+    color: C.muted,
+    fontSize: 11,
+    lineHeight: 17,
+    textAlign: 'center',
+    marginTop: 7,
+  },
+  note: {
     color: C.muted,
     fontSize: 10,
-    lineHeight: 15,
     textAlign: 'center',
-    marginTop: 15,
+    lineHeight: 15,
+    marginTop: 5,
   },
 });
