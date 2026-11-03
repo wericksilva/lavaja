@@ -248,7 +248,7 @@ export default function OrdersScreen({ navigate }: Props) {
 
         <TouchableOpacity
           style={styles.navItem}
-          onPress={() => navigate('home')}
+          onPress={() => navigate('profile')}
         >
           <Ionicons
             name="person-outline"

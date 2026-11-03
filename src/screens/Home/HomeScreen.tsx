@@ -28,7 +28,10 @@ export default function HomeScreen({ name, setService, navigate }: Props) {
     <ScrollView contentContainerStyle={styles.homeScroll} showsVerticalScrollIndicator={false}>
       <View style={styles.homeTop}>
         <View><Brand /><Text style={styles.greeting}>Oi, {name.trim().split(' ')[0] || 'tudo bem'} 👋</Text><Text style={styles.greetingSub}>Sua lavanderia, sem sair de casa.</Text></View>
-        <TouchableOpacity style={styles.avatar} onPress={() => Alert.alert('Perfil', 'A área de perfil será conectada na próxima etapa.')}><Ionicons name="person-outline" size={22} color={C.navy} /></TouchableOpacity>
+        <TouchableOpacity
+  style={styles.navItem}
+  onPress={() => navigate('profile')}
+><Ionicons name="person-outline" size={22} color={C.navy} /></TouchableOpacity>
       </View>
       <View style={styles.promoCard}>
         <View style={{ flex: 1 }}>
@@ -55,8 +58,15 @@ export default function HomeScreen({ name, setService, navigate }: Props) {
       </View>
       <View style={styles.bottomNav}>
         <View style={styles.navItem}><Ionicons name="home" size={21} color={C.blue} /><Text style={styles.navActive}>Início</Text></View>
+        
         <TouchableOpacity style={styles.navItem} onPress={() => navigate('orders')} ><Ionicons name="receipt-outline" size={21} color={C.muted} /><Text style={styles.navText}>Pedidos</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => Alert.alert('Perfil', 'A área de perfil será conectada na próxima etapa.')}><Ionicons name="person-outline" size={21} color={C.muted} /><Text style={styles.navText}>Perfil</Text></TouchableOpacity>
+        
+        
+        <TouchableOpacity
+  style={styles.avatar}
+  onPress={() => navigate('profile')}
+></TouchableOpacity>
+        
       </View>
     </ScrollView>
   </SafeAreaView>
