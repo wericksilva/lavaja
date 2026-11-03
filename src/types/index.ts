@@ -9,7 +9,8 @@ export type Screen =
   | 'payment'
   | 'confirmation'
   | 'orders'
-  | 'profile';
+  | 'profile'
+  | 'tracking';
 
 export type Service = 'Lavagem e dobra' | 'Lavar e passar' | 'Passadoria';
 export type PaymentMethod = 'Pix' | 'Cartão de crédito' | 'Pagar na entrega';

@@ -67,6 +67,35 @@ export default function OrdersScreen({ navigate }: Props) {
         <Text style={styles.heading}>
           Acompanhe suas roupas
         </Text>
+        <TouchableOpacity
+  style={{
+    backgroundColor: C.navy,
+    padding: 13,
+    borderRadius: 12,
+    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  }}
+  onPress={() => navigate('admin')}
+>
+  <Ionicons
+    name="settings-outline"
+    size={18}
+    color={C.white}
+  />
+
+  <Text
+    style={{
+      color: C.white,
+      fontWeight: '800',
+      fontSize: 12,
+    }}
+  >
+    Área administrativa
+  </Text>
+</TouchableOpacity>
 
         <Text style={styles.subtitle}>
           Veja o andamento e o histórico dos seus pedidos.
@@ -160,7 +189,7 @@ export default function OrdersScreen({ navigate }: Props) {
               {order.active && (
                 <TouchableOpacity
                   style={styles.trackButton}
-                  onPress={() => navigate('confirmation')}
+                  onPress={() => navigate('tracking')}
                 >
                   <Text style={styles.trackButtonText}>
                     Acompanhar

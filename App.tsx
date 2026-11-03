@@ -14,6 +14,8 @@ import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
 import OrdersScreen from './src/screens/Orders/OrdersScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScreen';
+import TrackingScreen from './src/screens/Tracking/TrackingScreen';
+import AdminScreen from './src/screens/Admin/AdminScreen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
@@ -33,6 +35,9 @@ export default function App() {
 
   const [orderNumber] = useState('LJ-2048');
 
+  // Etapa atual do acompanhamento: começa em "Lavagem".
+  const [currentStep, setCurrentStep] = useState(2);
+
   const selectedService =
     services.find((item) => item.name === service) || services[0];
 
@@ -41,7 +46,6 @@ export default function App() {
     [selectedService]
   );
 
-  // LOGIN
   const login = () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
@@ -55,7 +59,6 @@ export default function App() {
     setScreen('home');
   };
 
-  // CADASTRO
   const register = () => {
     if (
       !name.trim() ||
@@ -73,7 +76,6 @@ export default function App() {
     setScreen('home');
   };
 
-  // CONTINUAR PARA PAGAMENTO
   const continueToPayment = () => {
     if (!address.trim()) {
       Alert.alert(
@@ -86,41 +88,52 @@ export default function App() {
     setScreen('payment');
   };
 
-  // CONFIRMAR PEDIDO
   const confirmOrder = () => {
+    setCurrentStep(0);
     setScreen('confirmation');
   };
 
-  // NOVO PEDIDO
   const resetOrder = () => {
     setService('Lavagem e dobra');
     setAddress('');
     setInstructions('');
+    setCurrentStep(0);
     setScreen('home');
   };
 
   switch (screen) {
-
-    // RECUPERAÇÃO DE SENHA
     case 'forgotPassword':
       return (
         <ForgotPasswordScreen
           onBack={() => setScreen('login')}
           onSendRecovery={async (email) => {
-            // Integração real com serviço de recuperação
-            // será adicionada posteriormente.
             console.log('Solicitação de recuperação:', email);
           }}
         />
       );
 
-    // PEDIDOS
+    case 'tracking':
+      return (
+        <TrackingScreen
+          currentStep={currentStep}
+          onBack={() => setScreen('orders')}
+        />
+      );
+
+    case 'admin':
+      return (
+        <AdminScreen
+          currentStep={currentStep}
+          onChangeStep={setCurrentStep}
+          onBack={() => setScreen('orders')}
+        />
+      );
+
     case 'orders':
       return (
         <OrdersScreen navigate={setScreen} />
       );
 
-    // PERFIL
     case 'profile':
       return (
         <ProfileScreen
@@ -136,7 +149,6 @@ export default function App() {
         />
       );
 
-    // LOGIN
     case 'login':
       return (
         <LoginScreen
@@ -150,7 +162,6 @@ export default function App() {
         />
       );
 
-    // CADASTRO
     case 'register':
       return (
         <RegisterScreen
@@ -167,7 +178,6 @@ export default function App() {
         />
       );
 
-    // INÍCIO
     case 'home':
       return (
         <HomeScreen
@@ -177,7 +187,6 @@ export default function App() {
         />
       );
 
-    // AGENDAMENTO
     case 'schedule':
       return (
         <ScheduleScreen
@@ -197,7 +206,6 @@ export default function App() {
         />
       );
 
-    // PAGAMENTO
     case 'payment':
       return (
         <PaymentScreen
@@ -215,7 +223,6 @@ export default function App() {
         />
       );
 
-    // CONFIRMAÇÃO
     case 'confirmation':
       return (
         <ConfirmationScreen
