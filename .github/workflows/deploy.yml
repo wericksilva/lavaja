@@ -1,9 +1,11 @@
+
 name: Deploy LavaJa to GitHub Pages
 
 on:
   push:
     branches:
       - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -20,6 +22,7 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+
     runs-on: ubuntu-latest
 
     steps:
@@ -37,6 +40,9 @@ jobs:
 
       - name: Build web app
         run: npx expo export --platform web
+
+      - name: Disable Jekyll
+        run: touch dist/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
