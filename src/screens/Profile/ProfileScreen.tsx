@@ -309,7 +309,7 @@ export default function ProfileScreen({
         </TouchableOpacity>
 
         {/* SAIR */}
-        <TouchableOpacity style={styles.logout} onPress={sair}>
+        <TouchableOpacity style={styles.logout}   onPress={() => navigate('login')}>
           <Ionicons name="log-out-outline" size={21} color="#D64545" />
           <Text style={styles.logoutText}>Sair da conta</Text>
         </TouchableOpacity>
