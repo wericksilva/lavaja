@@ -263,6 +263,7 @@ export default function OrdersScreen({
           <Ionicons name="receipt" size={21} color={C.blue} />
           <Text style={styles.navActive}>Pedidos</Text>
         </View>
+        
 
         <TouchableOpacity
           style={styles.navItem}
