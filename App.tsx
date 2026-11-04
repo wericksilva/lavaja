@@ -145,7 +145,7 @@ export default function App() {
     }
 
     if (accountType === 'store') {
-      setScreen('admin');
+      setScreen('home');
     } else {
       setScreen('home');
     }
@@ -233,11 +233,14 @@ export default function App() {
     case 'admin':
       // Apenas contas de lavanderia podem acessar o painel
       if (accountType !== 'store') {
-        return <HomeScreen
-          name={name}
-          setService={setService}
-          navigate={setScreen}
-        />;
+        return (
+          <HomeScreen
+            name={name}
+            setService={setService}
+            navigate={setScreen}
+            isStore={false}
+          />
+        );
       }
 
       return (
@@ -308,13 +311,14 @@ export default function App() {
       );
 
     case 'home':
-      return (
-        <HomeScreen
-          name={name}
-          setService={setService}
-          navigate={setScreen}
-        />
-      );
+  return (
+    <HomeScreen
+      name={name}
+      setService={setService}
+      navigate={setScreen}
+      isStore={accountType === 'store'}
+    />
+  );
 
     case 'schedule':
       return (
