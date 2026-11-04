@@ -20,6 +20,7 @@ import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScr
 import TrackingScreen from './src/screens/Tracking/TrackingScreen';
 import AdminScreen from './src/screens/Admin/AdminScreen';
 import LaundryDetailsScreen from './src/screens/LaundryDetails/LaundryDetailsScreen';
+import ServicesScreen from './src/screens/Services/ServicesScreen';
 
 import type { LaundryOrder } from './src/types/order';
 
@@ -245,18 +246,27 @@ export default function App() {
       );
 
     case 'admin':
-      if (accountType !== 'store') {
-        return (
-          <HomeScreen
-            name={name}
-            setService={setService}
-            navigate={setScreen}
-            isStore={false}
-            selectedLaundry={selectedLaundry}
-            setSelectedLaundry={setSelectedLaundry}
-          />
-        );
-      }
+  if (accountType !== 'store') {
+    return (
+      <HomeScreen
+        name={name}
+        setService={setService}
+        navigate={setScreen}
+        isStore={false}
+        selectedLaundry={selectedLaundry}
+        setSelectedLaundry={setSelectedLaundry}
+      />
+    );
+  }
+
+  return (
+    <AdminScreen
+      orders={orders}
+      onChangeOrder={updateOrderStep}
+      onBack={() => setScreen('home')}
+      onServices={() => setScreen('services')}
+    />
+  );
 
       return (
         <AdminScreen
@@ -407,6 +417,22 @@ export default function App() {
           resetOrder={resetOrder}
         />
       );
+
+      case 'services':
+  if (accountType !== 'store') {
+    return (
+      <HomeScreen
+        name={name}
+        setService={setService}
+        navigate={setScreen}
+        isStore={false}
+        selectedLaundry={selectedLaundry}
+        setSelectedLaundry={setSelectedLaundry}
+      />
+    );
+  }
+
+  return <ServicesScreen navigate={setScreen} />;
 
     default:
       return (

@@ -11,10 +11,9 @@ export type Screen =
   | 'tracking'
   | 'forgotPassword'
   | 'helpSupport'
-  | 'laundryDetails';
+  | 'laundryDetails'
+  | 'services';
 
 export type Service = string;
-
 export type PaymentMethod = string;
-
 export type Navigate = (screen: Screen) => void;

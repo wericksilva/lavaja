@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   SafeAreaView,
@@ -19,6 +20,7 @@ type Props = {
   orders: LaundryOrder[];
   onChangeOrder: (id: string) => void;
   onBack: () => void;
+  onServices: () => void;
 };
 
 const steps = [
@@ -45,6 +47,7 @@ export default function AdminScreen({
   orders,
   onChangeOrder,
   onBack,
+  onServices,
 }: Props) {
   const activeOrders = orders.filter(
     (order) => getValidStep(order.currentStep) < steps.length - 1,
@@ -65,7 +68,7 @@ export default function AdminScreen({
         <Text style={styles.heading}>Gerenciar pedidos</Text>
 
         <Text style={styles.subtitle}>
-          Selecione um pedido para atualizar seu andamento.
+          Acompanhe seus pedidos e gerencie sua lavanderia.
         </Text>
 
         <View style={styles.summary}>
@@ -88,7 +91,44 @@ export default function AdminScreen({
             <Text style={styles.summaryLabel}>Entregues</Text>
           </View>
         </View>
-        
+
+        {/* ACESSO AOS SERVIÇOS */}
+        <TouchableOpacity
+          style={styles.servicesCard}
+          activeOpacity={0.85}
+          onPress={onServices}
+        >
+          <View style={styles.servicesIcon}>
+            <Ionicons
+              name="pricetags-outline"
+              size={25}
+              color={C.blue}
+            />
+          </View>
+
+          <View style={styles.servicesInfo}>
+            <Text style={styles.servicesTitle}>
+              Serviços e preços
+            </Text>
+
+            <Text style={styles.servicesDescription}>
+              Cadastre serviços, configure preços e prazos de entrega.
+            </Text>
+
+            <Text style={styles.servicesAction}>
+              GERENCIAR SERVIÇOS
+            </Text>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={22}
+            color={C.blue}
+          />
+        </TouchableOpacity>
+
+        <Text style={styles.sectionTitle}>Pedidos recebidos</Text>
+
         {orders.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyIcon}>
@@ -99,7 +139,9 @@ export default function AdminScreen({
               />
             </View>
 
-            <Text style={styles.emptyTitle}>Nenhum pedido encontrado</Text>
+            <Text style={styles.emptyTitle}>
+              Nenhum pedido encontrado
+            </Text>
 
             <Text style={styles.emptyText}>
               Quando houver pedidos cadastrados, eles aparecerão aqui para
@@ -124,14 +166,21 @@ export default function AdminScreen({
                   </View>
 
                   <View style={styles.orderInfo}>
-                    <Text style={styles.orderId}>Pedido {order.id}</Text>
-                    <Text style={styles.service}>{order.service}</Text>
+                    <Text style={styles.orderId}>
+                      Pedido {order.id}
+                    </Text>
+
+                    <Text style={styles.service}>
+                      {order.service}
+                    </Text>
                   </View>
 
                   <View
                     style={[
                       styles.badge,
-                      isDelivered ? styles.badgeDone : styles.badgeActive,
+                      isDelivered
+                        ? styles.badgeDone
+                        : styles.badgeActive,
                     ]}
                   >
                     <Text
@@ -151,17 +200,27 @@ export default function AdminScreen({
 
                 <View style={styles.details}>
                   <View style={styles.stepDetail}>
-                    <Text style={styles.detailLabel}>Etapa atual</Text>
-                    <Text style={styles.detailValue}>{status}</Text>
+                    <Text style={styles.detailLabel}>
+                      Etapa atual
+                    </Text>
+
+                    <Text style={styles.detailValue}>
+                      {status}
+                    </Text>
                   </View>
-                  
+
                   <View style={styles.valueContainer}>
                     <Text style={styles.detailLabel}>Valor</Text>
-                    <Text style={styles.value}>{money(order.value)}</Text>
+
+                    <Text style={styles.value}>
+                      {money(order.value)}
+                    </Text>
                   </View>
                 </View>
 
-                <Text style={styles.updateLabel}>Atualizar andamento:</Text>
+                <Text style={styles.updateLabel}>
+                  Atualizar andamento:
+                </Text>
 
                 {steps.map((step, index) => {
                   const selected = index === currentStep;
@@ -175,7 +234,9 @@ export default function AdminScreen({
                         styles.stepOption,
                         selected && styles.stepSelected,
                       ]}
-                      onPress={() => onChangeOrder(`${order.id}:${index}`)}
+                      onPress={() =>
+                        onChangeOrder(`${order.id}:${index}`)
+                      }
                     >
                       <Ionicons
                         name={
@@ -204,14 +265,16 @@ export default function AdminScreen({
                         {step}
                       </Text>
 
-                      {selected ? (
-                        <Text style={styles.currentText}>ATUAL</Text>
-                      ) : null}
+                      {selected && (
+                        <Text style={styles.currentText}>
+                          ATUAL
+                        </Text>
+                      )}
                     </TouchableOpacity>
                   );
                 })}
               </View>
-                 );
+            );
           })
         )}
 
@@ -275,6 +338,52 @@ const styles = StyleSheet.create({
     width: 1,
     height: 34,
     backgroundColor: C.line,
+  },
+  servicesCard: {
+    backgroundColor: C.white,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: C.line,
+    padding: 16,
+    marginBottom: 23,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  servicesIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: C.paleBlue,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  servicesInfo: {
+    flex: 1,
+  },
+  servicesTitle: {
+    color: C.navy,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  servicesDescription: {
+    color: C.muted,
+    fontSize: 10,
+    lineHeight: 15,
+    marginTop: 4,
+  },
+  servicesAction: {
+    color: C.blue,
+    fontSize: 9,
+    fontWeight: '800',
+    marginTop: 9,
+    letterSpacing: 0.4,
+  },
+  sectionTitle: {
+    color: C.navy,
+    fontSize: 16,
+    fontWeight: '800',
+    marginBottom: 12,
   },
   card: {
     backgroundColor: C.white,
@@ -341,7 +450,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
-   stepDetail: {
+  stepDetail: {
     flex: 1,
     paddingRight: 10,
   },
@@ -394,7 +503,7 @@ const styles = StyleSheet.create({
     color: C.blue,
     fontSize: 9,
     fontWeight: '800',
-    },
+  },
   emptyState: {
     backgroundColor: C.white,
     borderRadius: 17,
