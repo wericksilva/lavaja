@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -43,6 +42,48 @@ export default function ProfileScreen({
 }: Props) {
   const [editing, setEditing] = useState(false);
 
+  // Os campos de edição ficam separados dos dados principais do App.tsx.
+  const [draftName, setDraftName] = useState(name);
+  const [draftEmail, setDraftEmail] = useState(email);
+  const [draftPhone, setDraftPhone] = useState(phone);
+  const [draftAddress, setDraftAddress] = useState(address);
+
+  const startEditing = () => {
+    setDraftName(name);
+    setDraftEmail(email);
+    setDraftPhone(phone);
+    setDraftAddress(address);
+    setEditing(true);
+  };
+
+  const cancelEditing = () => {
+    setDraftName(name);
+    setDraftEmail(email);
+    setDraftPhone(phone);
+    setDraftAddress(address);
+    setEditing(false);
+  };
+
+  const saveChanges = () => {
+    if (!draftName.trim()) {
+      Alert.alert('Atenção', 'Informe seu nome completo.');
+      return;
+    }
+
+    if (!draftEmail.trim()) {
+      Alert.alert('Atenção', 'Informe seu e-mail.');
+      return;
+    }
+
+    setName(draftName.trim());
+    setEmail(draftEmail.trim());
+    setPhone(draftPhone.trim());
+    setAddress(draftAddress.trim());
+    setEditing(false);
+
+    Alert.alert('Sucesso', 'Seus dados foram atualizados!');
+  };
+
   const sair = () => {
     Alert.alert(
       'Sair da conta',
@@ -53,7 +94,7 @@ export default function ProfileScreen({
           text: 'Sair',
           onPress: () => navigate('login'),
         },
-      ]
+          ],
     );
   };
 
@@ -63,21 +104,23 @@ export default function ProfileScreen({
 
       <Header
         title="Meu perfil"
-        onBack={() => navigate('home')}
+        onBack={() => {
+          if (editing) {
+            cancelEditing();
+          }
+          navigate('home');
+        }}
       />
 
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         {/* FOTO E IDENTIFICAÇÃO */}
         <View style={styles.profileHeader}>
           <View style={styles.avatar}>
-            <Ionicons
-              name="person"
-              size={42}
-              color={C.blue}
-            />
+            <Ionicons name="person" size={42} color={C.blue} />
           </View>
 
           <Text style={styles.userName}>
@@ -94,29 +137,24 @@ export default function ProfileScreen({
               size={15}
               color={C.green}
             />
-            <Text style={styles.memberText}>
-              Cliente LavaJá
-            </Text>
+            <Text style={styles.memberText}>Cliente LavaJá</Text>
           </View>
         </View>
 
         {/* DADOS PESSOAIS */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Dados pessoais
-          </Text>
-
+          <Text style={styles.sectionTitle}>Dados pessoais</Text>
           <TouchableOpacity
-            onPress={() => setEditing(!editing)}
+            onPress={editing ? cancelEditing : startEditing}
             style={styles.editButton}
+            activeOpacity={0.7}
           >
             <Ionicons
               name={editing ? 'close-outline' : 'create-outline'}
               size={17}
               color={C.blue}
             />
-
-            <Text style={styles.editText}>
+              <Text style={styles.editText}>
               {editing ? 'Cancelar' : 'Editar'}
             </Text>
           </TouchableOpacity>
@@ -130,13 +168,13 @@ export default function ProfileScreen({
 
             <View style={styles.fieldContent}>
               <Text style={styles.label}>Nome completo</Text>
-
               {editing ? (
                 <TextInput
-                  value={name}
-                  onChangeText={setName}
+                  value={draftName}
+                  onChangeText={setDraftName}
                   style={styles.input}
                   placeholder="Seu nome"
+                  autoCapitalize="words"
                 />
               ) : (
                 <Text style={styles.value}>
@@ -155,14 +193,14 @@ export default function ProfileScreen({
 
             <View style={styles.fieldContent}>
               <Text style={styles.label}>E-mail</Text>
-
               {editing ? (
                 <TextInput
-                  value={email}
-                  onChangeText={setEmail}
+                  value={draftEmail}
+                  onChangeText={setDraftEmail}
                   style={styles.input}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  autoCorrect={false}
                   placeholder="Seu e-mail"
                 />
               ) : (
@@ -176,17 +214,16 @@ export default function ProfileScreen({
           <View style={styles.separator} />
 
           <View style={styles.field}>
-            <View style={styles.fieldIcon}>
+             <View style={styles.fieldIcon}>
               <Ionicons name="call-outline" size={20} color={C.blue} />
             </View>
 
             <View style={styles.fieldContent}>
               <Text style={styles.label}>Telefone</Text>
-
               {editing ? (
                 <TextInput
-                  value={phone}
-                  onChangeText={setPhone}
+                  value={draftPhone}
+                  onChangeText={setDraftPhone}
                   style={styles.input}
                   keyboardType="phone-pad"
                   placeholder="Seu telefone"
@@ -201,9 +238,7 @@ export default function ProfileScreen({
         </View>
 
         {/* ENDEREÇO */}
-        <Text style={styles.sectionTitle}>
-          Endereço de coleta
-        </Text>
+        <Text style={styles.sectionTitle}>Endereço de coleta</Text>
 
         <View style={styles.card}>
           <View style={styles.field}>
@@ -217,11 +252,10 @@ export default function ProfileScreen({
 
             <View style={styles.fieldContent}>
               <Text style={styles.label}>Endereço principal</Text>
-
               {editing ? (
                 <TextInput
-                  value={address}
-                  onChangeText={setAddress}
+                  value={draftAddress}
+                  onChangeText={setDraftAddress}
                   style={styles.input}
                   placeholder="Informe seu endereço"
                 />
@@ -234,93 +268,55 @@ export default function ProfileScreen({
           </View>
         </View>
 
-        {/* SALVAR */}
+        {/* AÇÕES DE EDIÇÃO */}
         {editing && (
-          <PrimaryButton
-            title="Salvar alterações"
-            onPress={() => {
-              setEditing(false);
-              Alert.alert(
-                'Sucesso',
-                'Seus dados foram atualizados!'
-              );
-            }}
-            icon="checkmark-circle-outline"
-          />
+          <View style={styles.editActions}>
+            <TouchableOpacity
+              style={styles.cancelButton}
+              onPress={cancelEditing}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cancelButtonText}>Descartar alterações</Text>
+            </TouchableOpacity>
+
+            <PrimaryButton
+              title="Salvar alterações"
+              onPress={saveChanges}
+              icon="checkmark-circle-outline"
+            />
+          </View>
         )}
 
         {/* ATALHOS */}
-        <Text style={styles.sectionTitle}>
-          Minha conta
-        </Text>
+        <Text style={styles.sectionTitle}>Minha conta</Text>
 
         <TouchableOpacity
           style={styles.option}
           onPress={() => navigate('orders')}
         >
-          <Ionicons
-            name="receipt-outline"
-            size={21}
-            color={C.blue}
-          />
-
-          <Text style={styles.optionText}>
-            Meus pedidos
-          </Text>
-
-          <Ionicons
-            name="chevron-forward"
-            size={19}
-            color={C.muted}
-          />
+          <Ionicons name="receipt-outline" size={21} color={C.blue} />
+          <Text style={styles.optionText}>Meus pedidos</Text>
+          <Ionicons name="chevron-forward" size={19} color={C.muted} />
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.option}
-          onPress={() =>
-            Alert.alert(
-              'Ajuda',
-              'Entre em contato com nossa equipe de atendimento.'
-            )
-          }
+          onPress={() => navigate('helpSupport')}
         >
-          <Ionicons
-            name="help-circle-outline"
-            size={21}
-            color={C.blue}
-          />
-
-          <Text style={styles.optionText}>
-            Ajuda e suporte
-          </Text>
-
-          <Ionicons
-            name="chevron-forward"
-            size={19}
-            color={C.muted}
-          />
+          <Ionicons name="help-circle-outline" size={21} color={C.blue} />
+          <Text style={styles.optionText}>Ajuda e suporte</Text>
+          <Ionicons name="chevron-forward" size={19} color={C.muted} />
         </TouchableOpacity>
 
         {/* SAIR */}
-        <TouchableOpacity
-          style={styles.logout}
-          onPress={sair}
-        >
-          <Ionicons
-            name="log-out-outline"
-            size={21}
-            color="#D64545"
-          />
-
-          <Text style={styles.logoutText}>
-            Sair da conta
-          </Text>
+        <TouchableOpacity style={styles.logout} onPress={sair}>
+          <Ionicons name="log-out-outline" size={21} color="#D64545" />
+          <Text style={styles.logoutText}>Sair da conta</Text>
         </TouchableOpacity>
 
         <Text style={styles.version}>
           LavaJá • Sua lavanderia, sem sair de casa.
         </Text>
-
       </ScrollView>
 
       {/* NAVEGAÇÃO INFERIOR */}
@@ -346,7 +342,6 @@ export default function ProfileScreen({
           <Text style={styles.navActive}>Perfil</Text>
         </View>
       </View>
-
     </SafeAreaView>
   );
 }
@@ -367,7 +362,7 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     marginBottom: 15,
   },
-
+  
   avatar: {
     width: 90,
     height: 90,
@@ -423,7 +418,7 @@ const styles = StyleSheet.create({
   },
 
   editButton: {
-    flexDirection: 'row',
+     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     padding: 7,
@@ -488,6 +483,28 @@ const styles = StyleSheet.create({
   separator: {
     height: 1,
     backgroundColor: C.line,
+  },
+
+  editActions: {
+    gap: 10,
+    marginTop: 8,
+    marginBottom: 10,
+  },
+
+  cancelButton: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: C.white,
+    borderWidth: 1,
+    borderColor: C.line,
+    borderRadius: 15,
+    padding: 15,
+  },
+
+  cancelButtonText: {
+    color: C.muted,
+    fontSize: 13,
+    fontWeight: '800',
   },
 
   option: {
