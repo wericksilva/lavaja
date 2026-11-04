@@ -12,6 +12,7 @@ import PaymentScreen from './src/screens/Payment/PaymentScreen';
 import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
 import OrdersScreen from './src/screens/Orders/OrdersScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
+import HelpSupportScreen from './src/screens/HelpSupport/HelpSupportScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScreen';
 import TrackingScreen from './src/screens/Tracking/TrackingScreen';
 import AdminScreen from './src/screens/Admin/AdminScreen';
@@ -34,10 +35,8 @@ export default function App() {
   const [payment, setPayment] = useState<PaymentMethod>('Pix');
   const [instructions, setInstructions] = useState('');
 
-  // O número é atualizado sempre que um novo pedido é confirmado.
   const [orderNumber, setOrderNumber] = useState('');
 
-  // Pedidos demonstrativos iniciais.
   const [orders, setOrders] = useState<LaundryOrder[]>([
     {
       id: 'LJ-2048',
@@ -75,7 +74,6 @@ export default function App() {
     [selectedService],
   );
 
-  // Atualiza a etapa de um pedido pelo painel administrativo.
   const updateOrderStep = (value: string) => {
     const separatorIndex = value.lastIndexOf(':');
 
@@ -94,7 +92,7 @@ export default function App() {
     ) {
       return;
     }
-    
+
     setOrders((previous) =>
       previous.map((order) =>
         order.id === id
@@ -104,7 +102,6 @@ export default function App() {
     );
   };
 
-  // Login demonstrativo.
   const login = () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
@@ -118,7 +115,6 @@ export default function App() {
     setScreen('home');
   };
 
-  // Cadastro demonstrativo.
   const register = () => {
     if (
       !name.trim() ||
@@ -136,7 +132,6 @@ export default function App() {
     setScreen('home');
   };
 
-  // Valida o endereço antes de avançar para o pagamento.
   const continueToPayment = () => {
     if (!address.trim()) {
       Alert.alert(
@@ -149,7 +144,6 @@ export default function App() {
     setScreen('payment');
   };
 
-  // Cria um novo pedido a cada confirmação, sem reutilizar o pedido LJ-2048.
   const confirmOrder = () => {
     const highestOrderNumber = orders.reduce((highest, order) => {
       const match = order.id.match(/^LJ-(\d+)$/);
@@ -157,7 +151,7 @@ export default function App() {
 
       return Math.max(highest, number);
     }, 0);
-    
+
     const newOrderNumber = `LJ-${highestOrderNumber + 1}`;
 
     const newOrder: LaundryOrder = {
@@ -166,6 +160,10 @@ export default function App() {
       date,
       value: total,
       currentStep: 0,
+      time,
+      address,
+      instructions,
+      payment,
     };
 
     setOrders((previous) => [newOrder, ...previous]);
@@ -174,7 +172,6 @@ export default function App() {
     setScreen('confirmation');
   };
 
-  // Prepara os campos para uma nova solicitação.
   const resetOrder = () => {
     setService('Lavagem e dobra');
     setAddress('');
@@ -191,11 +188,13 @@ export default function App() {
         <ForgotPasswordScreen
           onBack={() => setScreen('login')}
           onSendRecovery={async (recoveryEmail) => {
-            // Envio demonstrativo. A integração de e-mail será feita depois.
             console.log('Solicitação de recuperação:', recoveryEmail);
           }}
         />
       );
+
+    case 'helpSupport':
+      return <HelpSupportScreen navigate={setScreen} />;
 
     case 'tracking':
       if (!selectedOrder) {
@@ -219,7 +218,7 @@ export default function App() {
       );
 
     case 'orders':
-        return (
+      return (
         <OrdersScreen
           orders={orders}
           navigate={setScreen}
@@ -282,7 +281,7 @@ export default function App() {
           navigate={setScreen}
         />
       );
-      
+
     case 'schedule':
       return (
         <ScheduleScreen

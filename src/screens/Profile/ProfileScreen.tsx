@@ -43,14 +43,12 @@ export default function ProfileScreen({
   const [editing, setEditing] = useState(false);
 
   // Os campos de edição ficam separados dos dados principais do App.tsx.
-  // Assim, digitar não altera os dados salvos até tocar em "Salvar".
   const [draftName, setDraftName] = useState(name);
   const [draftEmail, setDraftEmail] = useState(email);
   const [draftPhone, setDraftPhone] = useState(phone);
   const [draftAddress, setDraftAddress] = useState(address);
 
   const startEditing = () => {
-    // Sempre começa a edição com os dados atualmente salvos.
     setDraftName(name);
     setDraftEmail(email);
     setDraftPhone(phone);
@@ -59,7 +57,6 @@ export default function ProfileScreen({
   };
 
   const cancelEditing = () => {
-    // Descarta tudo o que foi digitado e mantém os dados originais.
     setDraftName(name);
     setDraftEmail(email);
     setDraftPhone(phone);
@@ -78,7 +75,6 @@ export default function ProfileScreen({
       return;
     }
 
-    // Só atualiza o App.tsx quando o usuário confirma em Salvar.
     setName(draftName.trim());
     setEmail(draftEmail.trim());
     setPhone(draftPhone.trim());
@@ -94,11 +90,11 @@ export default function ProfileScreen({
       'Deseja realmente sair?',
       [
         { text: 'Cancelar', style: 'cancel' },
-          {
+        {
           text: 'Sair',
           onPress: () => navigate('login'),
         },
-      ]
+          ],
     );
   };
 
@@ -148,7 +144,7 @@ export default function ProfileScreen({
         {/* DADOS PESSOAIS */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Dados pessoais</Text>
-           <TouchableOpacity
+          <TouchableOpacity
             onPress={editing ? cancelEditing : startEditing}
             style={styles.editButton}
             activeOpacity={0.7}
@@ -158,7 +154,7 @@ export default function ProfileScreen({
               size={17}
               color={C.blue}
             />
-            <Text style={styles.editText}>
+              <Text style={styles.editText}>
               {editing ? 'Cancelar' : 'Editar'}
             </Text>
           </TouchableOpacity>
@@ -206,7 +202,7 @@ export default function ProfileScreen({
                   autoCapitalize="none"
                   autoCorrect={false}
                   placeholder="Seu e-mail"
-                            />
+                />
               ) : (
                 <Text style={styles.value}>
                   {email || 'Não informado'}
@@ -218,7 +214,7 @@ export default function ProfileScreen({
           <View style={styles.separator} />
 
           <View style={styles.field}>
-            <View style={styles.fieldIcon}>
+             <View style={styles.fieldIcon}>
               <Ionicons name="call-outline" size={20} color={C.blue} />
             </View>
 
@@ -287,7 +283,7 @@ export default function ProfileScreen({
               title="Salvar alterações"
               onPress={saveChanges}
               icon="checkmark-circle-outline"
-              />
+            />
           </View>
         )}
 
@@ -305,12 +301,7 @@ export default function ProfileScreen({
 
         <TouchableOpacity
           style={styles.option}
-          onPress={() =>
-            Alert.alert(
-              'Ajuda',
-              'Entre em contato com nossa equipe de atendimento.'
-            )
-          }
+          onPress={() => navigate('helpSupport')}
         >
           <Ionicons name="help-circle-outline" size={21} color={C.blue} />
           <Text style={styles.optionText}>Ajuda e suporte</Text>
@@ -354,6 +345,7 @@ export default function ProfileScreen({
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -370,7 +362,7 @@ const styles = StyleSheet.create({
     paddingVertical: 25,
     marginBottom: 15,
   },
-
+  
   avatar: {
     width: 90,
     height: 90,
@@ -403,6 +395,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 12,
   },
+
   memberText: {
     color: C.green,
     fontSize: 11,
@@ -425,7 +418,7 @@ const styles = StyleSheet.create({
   },
 
   editButton: {
-    flexDirection: 'row',
+     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     padding: 7,
@@ -461,6 +454,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   fieldContent: {
     flex: 1,
   },
@@ -512,6 +506,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800',
   },
+
   option: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -554,6 +549,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 22,
   },
+
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: C.white,
@@ -583,4 +579,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-
