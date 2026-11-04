@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -21,12 +20,14 @@ type Props = {
   navigate: Navigate;
   orders: LaundryOrder[];
   onTrack: (id: string) => void;
+  isStore: boolean;
 };
 
 export default function OrdersScreen({
   navigate,
   orders,
   onTrack,
+  isStore,
 }: Props) {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
 
@@ -50,14 +51,19 @@ export default function OrdersScreen({
       >
         <Text style={styles.heading}>Acompanhe suas roupas</Text>
 
-        <TouchableOpacity
-          style={styles.adminButton}
-          onPress={() => navigate('admin')}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="settings-outline" size={18} color={C.white} />
-          <Text style={styles.adminButtonText}>Área administrativa</Text>
-        </TouchableOpacity>
+        {/* Botão administrativo exclusivo para lavanderias */}
+        {isStore && (
+          <TouchableOpacity
+            style={styles.adminButton}
+            onPress={() => navigate('admin')}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="settings-outline" size={18} color={C.white} />
+            <Text style={styles.adminButtonText}>
+              Área administrativa
+            </Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.subtitle}>
           Veja o andamento e o histórico dos seus pedidos.
@@ -66,7 +72,9 @@ export default function OrdersScreen({
         {orders.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="receipt-outline" size={42} color={C.muted} />
-            <Text style={styles.emptyTitle}>Nenhum pedido encontrado</Text>
+            <Text style={styles.emptyTitle}>
+              Nenhum pedido encontrado
+            </Text>
             <Text style={styles.emptyText}>
               Seus pedidos aparecerão aqui quando você fizer uma solicitação.
             </Text>
@@ -90,18 +98,26 @@ export default function OrdersScreen({
               >
                 <View style={styles.cardTop}>
                   <View style={styles.orderIcon}>
-                    <Ionicons name="shirt-outline" size={22} color={C.blue} />
+                    <Ionicons
+                      name="shirt-outline"
+                      size={22}
+                      color={C.blue}
+                    />
                   </View>
 
                   <View style={styles.orderInfo}>
                     <Text style={styles.service}>{order.service}</Text>
-                    <Text style={styles.orderId}>Pedido {order.id}</Text>
+                    <Text style={styles.orderId}>
+                      Pedido {order.id}
+                    </Text>
                   </View>
 
                   <View
                     style={[
                       styles.status,
-                      isCompleted ? styles.statusDone : styles.statusActive,
+                      isCompleted
+                        ? styles.statusDone
+                        : styles.statusActive,
                     ]}
                   >
                     <Text
@@ -128,7 +144,10 @@ export default function OrdersScreen({
                     />
                     <Text style={styles.detailText}>{order.date}</Text>
                   </View>
-                  <Text style={styles.value}>{money(order.value)}</Text>
+
+                  <Text style={styles.value}>
+                    {money(order.value)}
+                  </Text>
                 </View>
 
                 {hasExtraDetails && (
@@ -139,8 +158,11 @@ export default function OrdersScreen({
                       activeOpacity={0.75}
                     >
                       <Text style={styles.detailsToggleText}>
-                        {isExpanded ? 'Ocultar detalhes' : 'Ver detalhes do pedido'}
+                        {isExpanded
+                          ? 'Ocultar detalhes'
+                          : 'Ver detalhes do pedido'}
                       </Text>
+
                       <Ionicons
                         name={isExpanded ? 'chevron-up' : 'chevron-down'}
                         size={17}
@@ -197,6 +219,7 @@ export default function OrdersScreen({
                       size={17}
                       color={isCompleted ? C.green : C.blue}
                     />
+
                     <Text style={styles.descriptionText}>
                       {isCompleted
                         ? 'Pedido entregue com sucesso.'
@@ -209,8 +232,14 @@ export default function OrdersScreen({
                     onPress={() => onTrack(order.id)}
                     activeOpacity={0.8}
                   >
-                    <Text style={styles.trackButtonText}>Acompanhar</Text>
-                    <Ionicons name="arrow-forward" size={15} color={C.blue} />
+                    <Text style={styles.trackButtonText}>
+                      Acompanhar
+                    </Text>
+                    <Ionicons
+                      name="arrow-forward"
+                      size={15}
+                      color={C.blue}
+                    />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -226,13 +255,19 @@ export default function OrdersScreen({
               color={C.blue}
             />
           </View>
+
           <View style={{ flex: 1 }}>
             <Text style={styles.helpTitle}>Precisa de ajuda?</Text>
             <Text style={styles.helpText}>
               Nossa equipe está pronta para ajudar com seu pedido.
             </Text>
           </View>
-          <Ionicons name="chevron-forward" size={18} color={C.muted} />
+
+          <Ionicons
+            name="chevron-forward"
+            size={18}
+            color={C.muted}
+          />
         </View>
 
         <TouchableOpacity
@@ -240,7 +275,11 @@ export default function OrdersScreen({
           onPress={() => navigate('schedule')}
           activeOpacity={0.8}
         >
-          <Ionicons name="add-circle-outline" size={20} color={C.white} />
+          <Ionicons
+            name="add-circle-outline"
+            size={20}
+            color={C.white}
+          />
           <Text style={styles.newOrderText}>Fazer novo pedido</Text>
         </TouchableOpacity>
 
@@ -255,7 +294,11 @@ export default function OrdersScreen({
           style={styles.navItem}
           onPress={() => navigate('home')}
         >
-          <Ionicons name="home-outline" size={21} color={C.muted} />
+          <Ionicons
+            name="home-outline"
+            size={21}
+            color={C.muted}
+          />
           <Text style={styles.navText}>Início</Text>
         </TouchableOpacity>
 
@@ -263,13 +306,16 @@ export default function OrdersScreen({
           <Ionicons name="receipt" size={21} color={C.blue} />
           <Text style={styles.navActive}>Pedidos</Text>
         </View>
-        
 
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigate('profile')}
         >
-          <Ionicons name="person-outline" size={21} color={C.muted} />
+          <Ionicons
+            name="person-outline"
+            size={21}
+            color={C.muted}
+          />
           <Text style={styles.navText}>Perfil</Text>
         </TouchableOpacity>
       </View>
@@ -287,6 +333,7 @@ function DetailRow({ icon, label, value }: DetailRowProps) {
   return (
     <View style={styles.detailRow}>
       <Ionicons name={icon} size={16} color={C.muted} />
+
       <View style={styles.detailRowText}>
         <Text style={styles.detailLabel}>{label}</Text>
         <Text style={styles.detailValue}>{value}</Text>
@@ -587,4 +634,3 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 });
-

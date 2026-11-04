@@ -5,7 +5,9 @@ import type { Screen, Service, PaymentMethod } from './src/types';
 import { services } from './src/data/services';
 
 import LoginScreen from './src/screens/Login/LoginScreen';
-import RegisterScreen from './src/screens/Register/RegisterScreen';
+import RegisterScreen, {
+  type AccountType,
+} from './src/screens/Register/RegisterScreen';
 import HomeScreen from './src/screens/Home/HomeScreen';
 import ScheduleScreen from './src/screens/Schedule/ScheduleScreen';
 import PaymentScreen from './src/screens/Payment/PaymentScreen';
@@ -22,11 +24,16 @@ import type { LaundryOrder } from './src/types/order';
 export default function App() {
   const [screen, setScreen] = useState<Screen>('login');
 
+  // Dados do usuário
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
+  // Tipo de conta: cliente ou lavanderia
+  const [accountType, setAccountType] = useState<AccountType>('client');
+
+  // Dados do pedido
   const [address, setAddress] = useState('');
   const [service, setService] = useState<Service>('Lavagem e dobra');
   const [date, setDate] = useState('Hoje, 29 out.');
@@ -74,6 +81,7 @@ export default function App() {
     [selectedService],
   );
 
+  // Atualiza a etapa de um pedido
   const updateOrderStep = (value: string) => {
     const separatorIndex = value.lastIndexOf(':');
 
@@ -102,6 +110,7 @@ export default function App() {
     );
   };
 
+  // Login
   const login = () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
@@ -112,9 +121,15 @@ export default function App() {
     }
 
     setName((currentName) => currentName.trim() || 'Cliente');
-    setScreen('home');
+
+    if (accountType === 'store') {
+      setScreen('admin');
+    } else {
+      setScreen('home');
+    }
   };
 
+  // Cadastro
   const register = () => {
     if (
       !name.trim() ||
@@ -129,9 +144,14 @@ export default function App() {
       return;
     }
 
-    setScreen('home');
+    if (accountType === 'store') {
+      setScreen('admin');
+    } else {
+      setScreen('home');
+    }
   };
 
+  // Continua para o pagamento
   const continueToPayment = () => {
     if (!address.trim()) {
       Alert.alert(
@@ -144,6 +164,7 @@ export default function App() {
     setScreen('payment');
   };
 
+  // Confirma o pedido
   const confirmOrder = () => {
     const highestOrderNumber = orders.reduce((highest, order) => {
       const match = order.id.match(/^LJ-(\d+)$/);
@@ -172,6 +193,7 @@ export default function App() {
     setScreen('confirmation');
   };
 
+  // Finaliza o fluxo do pedido
   const resetOrder = () => {
     setService('Lavagem e dobra');
     setAddress('');
@@ -209,6 +231,15 @@ export default function App() {
       );
 
     case 'admin':
+      // Apenas contas de lavanderia podem acessar o painel
+      if (accountType !== 'store') {
+        return <HomeScreen
+          name={name}
+          setService={setService}
+          navigate={setScreen}
+        />;
+      }
+
       return (
         <AdminScreen
           orders={orders}
@@ -222,6 +253,7 @@ export default function App() {
         <OrdersScreen
           orders={orders}
           navigate={setScreen}
+          isStore={accountType === 'store'}
           onTrack={(id) => {
             setSelectedOrderId(id);
             setScreen('tracking');
@@ -268,6 +300,8 @@ export default function App() {
           setPhone={setPhone}
           password={password}
           setPassword={setPassword}
+          accountType={accountType}
+          setAccountType={setAccountType}
           register={register}
           navigate={setScreen}
         />

@@ -8,6 +8,7 @@ import {
   Text,
   KeyboardAvoidingView,
   Platform,
+  TouchableOpacity,
 } from 'react-native';
 
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -22,6 +23,8 @@ import PrimaryButton from '../../components/PrimaryButton';
 
 import type { Navigate } from '../../types';
 
+export type AccountType = 'client' | 'store';
+
 type Props = {
   name: string;
   setName: (value: string) => void;
@@ -31,6 +34,8 @@ type Props = {
   setPhone: (value: string) => void;
   password: string;
   setPassword: (value: string) => void;
+  accountType: AccountType;
+  setAccountType: (value: AccountType) => void;
   register: () => void;
   navigate: Navigate;
 };
@@ -44,6 +49,8 @@ export default function RegisterScreen({
   setPhone,
   password,
   setPassword,
+  accountType,
+  setAccountType,
   register,
   navigate,
 }: Props) {
@@ -96,6 +103,9 @@ export default function RegisterScreen({
     }
   };
 
+  const isClientSelected = accountType === 'client';
+  const isStoreSelected = accountType === 'store';
+
   return (
     <SafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
@@ -129,15 +139,108 @@ export default function RegisterScreen({
             Crie sua conta para acompanhar suas roupas em cada etapa.
           </Text>
 
+          {/* TIPO DE CONTA */}
+          <Text style={localStyles.sectionTitle}>
+            Como você deseja utilizar o LavaJá?
+          </Text>
+
+          <View style={localStyles.optionsContainer}>
+            {/* OPÇÃO CLIENTE */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => setAccountType('client')}
+              style={[
+                localStyles.accountOption,
+                isClientSelected && localStyles.accountOptionSelected,
+              ]}
+            >
+              {isClientSelected && (
+                <View style={localStyles.checkIcon}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={19}
+                    color={C.blue}
+                  />
+                </View>
+              )}
+
+              <Ionicons
+                name="person-outline"
+                size={30}
+                color={isClientSelected ? C.blue : '#64748B'}
+              />
+
+              <Text
+                style={[
+                  localStyles.optionTitle,
+                  isClientSelected && localStyles.optionTitleSelected,
+                ]}
+              >
+                Sou cliente
+              </Text>
+
+              <Text style={localStyles.optionDescription}>
+                Quero solicitar serviços
+              </Text>
+            </TouchableOpacity>
+
+            {/* OPÇÃO LAVANDERIA */}
+            <TouchableOpacity
+              activeOpacity={0.75}
+              onPress={() => setAccountType('store')}
+              style={[
+                localStyles.accountOption,
+                isStoreSelected && localStyles.accountOptionSelected,
+              ]}
+            >
+              {isStoreSelected && (
+                <View style={localStyles.checkIcon}>
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={19}
+                    color={C.blue}
+                  />
+                </View>
+              )}
+
+              <Ionicons
+                name="storefront-outline"
+                size={30}
+                color={isStoreSelected ? C.blue : '#64748B'}
+              />
+
+              <Text
+                style={[
+                  localStyles.optionTitle,
+                  isStoreSelected && localStyles.optionTitleSelected,
+                ]}
+              >
+                Sou lavanderia
+              </Text>
+
+              <Text style={localStyles.optionDescription}>
+                Quero gerenciar pedidos
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           {/* NOME */}
           <Field
-            label="Nome completo"
+            label={
+              accountType === 'store'
+                ? 'Nome da lavanderia ou responsável'
+                : 'Nome completo'
+            }
             value={name}
             onChangeText={(value) => {
               setName(value);
               if (nameError) setNameError('');
             }}
-            placeholder="Como podemos te chamar?"
+            placeholder={
+              accountType === 'store'
+                ? 'Nome da sua lavanderia'
+                : 'Como podemos te chamar?'
+            }
             icon="person-outline"
           />
 
@@ -210,6 +313,65 @@ export default function RegisterScreen({
     </SafeAreaView>
   );
 }
+
+const localStyles = {
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#253247',
+    marginTop: 8,
+    marginBottom: 12,
+  },
+
+  optionsContainer: {
+    flexDirection: 'row' as const,
+    gap: 12,
+    marginBottom: 22,
+  },
+
+  accountOption: {
+    flex: 1,
+    minHeight: 120,
+    paddingVertical: 16,
+    paddingHorizontal: 8,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    position: 'relative' as const,
+  },
+
+  accountOptionSelected: {
+    borderColor: C.blue,
+    backgroundColor: '#EFF6FF',
+  },
+
+  checkIcon: {
+    position: 'absolute' as const,
+    top: 7,
+    right: 7,
+  },
+
+  optionTitle: {
+    fontSize: 14,
+    fontWeight: '700' as const,
+    color: '#253247',
+    marginTop: 9,
+  },
+
+  optionTitleSelected: {
+    color: C.blue,
+  },
+
+  optionDescription: {
+    fontSize: 10,
+    color: '#64748B',
+    textAlign: 'center' as const,
+    marginTop: 5,
+  },
+};
 
 const validationStyles = {
   error: {
