@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 
 import type { Screen, Service, PaymentMethod } from './src/types';
 import { services } from './src/data/services';
+import { type Laundry } from './src/data/laundries';
 
 import LoginScreen from './src/screens/Login/LoginScreen';
 import RegisterScreen, {
@@ -33,10 +34,13 @@ export default function App() {
   // Tipo de conta: cliente ou lavanderia
   const [accountType, setAccountType] = useState<AccountType>('client');
 
+  // Lavanderia escolhida pelo cliente
+  const [selectedLaundry, setSelectedLaundry] = useState<Laundry | null>(null);
+
   // Dados do pedido
   const [address, setAddress] = useState('');
   const [service, setService] = useState<Service>('Lavagem e dobra');
-  const [date, setDate] = useState('Hoje, 29 out.');
+  const [date, setDate] = useState('Hoje, 04 nov.');
   const [time, setTime] = useState('14h–16h');
 
   const [payment, setPayment] = useState<PaymentMethod>('Pix');
@@ -76,9 +80,10 @@ export default function App() {
   const selectedService =
     services.find((item) => item.name === service) ?? services[0];
 
+  // Serviço + taxa da lavanderia escolhida
   const total = useMemo(
-    () => selectedService.price + 8.90,
-    [selectedService],
+    () => selectedService.price + (selectedLaundry?.deliveryFee ?? 8.90),
+    [selectedService, selectedLaundry],
   );
 
   // Atualiza a etapa de um pedido
@@ -144,15 +149,20 @@ export default function App() {
       return;
     }
 
-    if (accountType === 'store') {
-      setScreen('home');
-    } else {
-      setScreen('home');
-    }
+    setScreen('home');
   };
 
   // Continua para o pagamento
   const continueToPayment = () => {
+    if (!selectedLaundry) {
+      Alert.alert(
+        'Lavanderia não selecionada',
+        'Volte à tela inicial e escolha uma lavanderia.',
+      );
+      setScreen('home');
+      return;
+    }
+
     if (!address.trim()) {
       Alert.alert(
         'Endereço necessário',
@@ -198,9 +208,11 @@ export default function App() {
     setService('Lavagem e dobra');
     setAddress('');
     setInstructions('');
-    setDate('Hoje, 29 out.');
+    setDate('Hoje, 04 nov.');
     setTime('14h–16h');
     setPayment('Pix');
+
+    // Mantém a lavanderia selecionada para facilitar um novo pedido
     setScreen('home');
   };
 
@@ -239,6 +251,8 @@ export default function App() {
             setService={setService}
             navigate={setScreen}
             isStore={false}
+            selectedLaundry={selectedLaundry}
+            setSelectedLaundry={setSelectedLaundry}
           />
         );
       }
@@ -311,14 +325,16 @@ export default function App() {
       );
 
     case 'home':
-  return (
-    <HomeScreen
-      name={name}
-      setService={setService}
-      navigate={setScreen}
-      isStore={accountType === 'store'}
-    />
-  );
+      return (
+        <HomeScreen
+          name={name}
+          setService={setService}
+          navigate={setScreen}
+          isStore={accountType === 'store'}
+          selectedLaundry={selectedLaundry}
+          setSelectedLaundry={setSelectedLaundry}
+        />
+      );
 
     case 'schedule':
       return (
