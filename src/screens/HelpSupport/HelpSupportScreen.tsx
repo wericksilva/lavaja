@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Alert,
@@ -19,6 +18,13 @@ type Props = {
   navigate: (screen: Screen) => void;
 };
 
+type FormErrors = {
+  name?: string;
+  email?: string;
+  subject?: string;
+  message?: string;
+};
+
 const WHATSAPP_NUMBER = '5561991699805';
 
 export default function HelpSupportScreen({ navigate }: Props) {
@@ -26,6 +32,7 @@ export default function HelpSupportScreen({ navigate }: Props) {
   const [email, setEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [errors, setErrors] = useState<FormErrors>({});
 
   const openWhatsApp = async () => {
     const text = encodeURIComponent(
@@ -44,29 +51,63 @@ export default function HelpSupportScreen({ navigate }: Props) {
     }
   };
 
-  const submitForm = () => {
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !subject.trim() ||
-      !message.trim()
-    ) {
-      Alert.alert(
-        'Campos obrigatórios',
-        'Preencha todos os campos antes de enviar.'
-      );
-      return;
+  const validateField = (
+    field: keyof FormErrors,
+    value: string
+  ): string | undefined => {
+    const trimmedValue = value.trim();
+
+    if (!trimmedValue) {
+      const fieldNames: Record<keyof FormErrors, string> = {
+        name: 'Nome',
+        email: 'E-mail',
+        subject: 'Assunto',
+        message: 'Mensagem',
+      };
+
+      return `O campo ${fieldNames[field]} é obrigatório.`;
     }
 
-    const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      email.trim()
+    if (
+      field === 'email' &&
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedValue)
+    ) {
+      return 'Digite um endereço de e-mail válido.';
+    }
+
+    return undefined;
+  };
+
+  const handleChange = (
+    field: keyof FormErrors,
+    value: string,
+    setter: (value: string) => void
+  ) => {
+    setter(value);
+
+    if (errors[field]) {
+      setErrors((previous) => ({
+        ...previous,
+        [field]: validateField(field, value),
+      }));
+    }
+  };
+
+  const submitForm = () => {
+    const newErrors: FormErrors = {
+      name: validateField('name', name),
+      email: validateField('email', email),
+      subject: validateField('subject', subject),
+      message: validateField('message', message),
+    };
+
+    setErrors(newErrors);
+
+    const hasErrors = Object.values(newErrors).some(
+      (error) => Boolean(error)
     );
 
-    if (!emailIsValid) {
-      Alert.alert(
-        'E-mail inválido',
-        'Digite um endereço de e-mail válido.'
-      );
+    if (hasErrors) {
       return;
     }
 
@@ -77,6 +118,7 @@ export default function HelpSupportScreen({ navigate }: Props) {
 
     setSubject('');
     setMessage('');
+    setErrors({});
   };
 
   return (
@@ -91,38 +133,29 @@ export default function HelpSupportScreen({ navigate }: Props) {
           style={styles.backButton}
           onPress={() => navigate('profile')}
         >
-          <Text style={styles.backText}>
-            ‹ Voltar ao perfil
-          </Text>
+          <Text style={styles.backText}>‹ Voltar ao perfil</Text>
         </TouchableOpacity>
 
-        <Text style={styles.title}>
-          Ajuda e suporte
-        </Text>
+        <Text style={styles.title}>Ajuda e suporte</Text>
 
         <Text style={styles.subtitle}>
           Estamos aqui para ajudar. Escolha uma das opções abaixo.
         </Text>
 
         {/* ATENDIMENTO WHATSAPP */}
-
         <View style={styles.whatsappCard}>
           <View style={styles.whatsappIcon}>
             <Text style={styles.whatsappIconText}>W</Text>
           </View>
 
           <View style={styles.whatsappContent}>
-            <Text style={styles.cardTitle}>
-              Fale pelo WhatsApp
-            </Text>
+            <Text style={styles.cardTitle}>Fale pelo WhatsApp</Text>
 
             <Text style={styles.cardDescription}>
               Converse com nossa equipe de atendimento.
             </Text>
 
-            <Text style={styles.phone}>
-              (61) 99169-9805
-            </Text>
+            <Text style={styles.phone}>(61) 99169-9805</Text>
 
             <TouchableOpacity
               style={styles.whatsappButton}
@@ -136,11 +169,8 @@ export default function HelpSupportScreen({ navigate }: Props) {
         </View>
 
         {/* FORMULÁRIO DE CONTATO */}
-
         <View style={styles.formCard}>
-          <Text style={styles.sectionTitle}>
-            Envie uma mensagem
-          </Text>
+          <Text style={styles.sectionTitle}>Envie uma mensagem</Text>
 
           <Text style={styles.cardDescription}>
             Preencha os campos e deixe sua dúvida ou solicitação.
@@ -149,47 +179,71 @@ export default function HelpSupportScreen({ navigate }: Props) {
           <Text style={styles.label}>Nome</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.name && styles.inputError]}
             placeholder="Seu nome"
             placeholderTextColor="#8A94A6"
             value={name}
-            onChangeText={setName}
+            onChangeText={(value) =>
+              handleChange('name', value, setName)
+            }
             autoCapitalize="words"
           />
+          {errors.name && (
+            <Text style={styles.errorText}>{errors.name}</Text>
+          )}
 
           <Text style={styles.label}>E-mail</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.email && styles.inputError]}
             placeholder="seuemail@exemplo.com"
             placeholderTextColor="#8A94A6"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(value) =>
+              handleChange('email', value, setEmail)
+            }
             keyboardType="email-address"
             autoCapitalize="none"
           />
+          {errors.email && (
+            <Text style={styles.errorText}>{errors.email}</Text>
+          )}
 
           <Text style={styles.label}>Assunto</Text>
 
           <TextInput
-            style={styles.input}
+            style={[styles.input, errors.subject && styles.inputError]}
             placeholder="Qual é o assunto?"
             placeholderTextColor="#8A94A6"
             value={subject}
-            onChangeText={setSubject}
+            onChangeText={(value) =>
+              handleChange('subject', value, setSubject)
+            }
           />
+          {errors.subject && (
+            <Text style={styles.errorText}>{errors.subject}</Text>
+          )}
 
           <Text style={styles.label}>Mensagem</Text>
 
           <TextInput
-            style={[styles.input, styles.messageInput]}
+            style={[
+              styles.input,
+              styles.messageInput,
+              errors.message && styles.inputError,
+            ]}
             placeholder="Escreva sua mensagem..."
             placeholderTextColor="#8A94A6"
             value={message}
-            onChangeText={setMessage}
+            onChangeText={(value) =>
+              handleChange('message', value, setMessage)
+            }
             multiline
             textAlignVertical="top"
           />
+          {errors.message && (
+            <Text style={styles.errorText}>{errors.message}</Text>
+          )}
 
           <TouchableOpacity
             style={styles.submitButton}
@@ -201,25 +255,22 @@ export default function HelpSupportScreen({ navigate }: Props) {
           </TouchableOpacity>
 
           <Text style={styles.note}>
-            O envio pelo formulário será conectado ao serviço
-            de atendimento em uma próxima etapa.
+            O envio pelo formulário será conectado ao serviço de
+            atendimento em uma próxima etapa.
           </Text>
         </View>
 
         {/* DÚVIDAS FREQUENTES */}
-
         <View style={styles.faqCard}>
-          <Text style={styles.sectionTitle}>
-            Dúvidas frequentes
-          </Text>
+          <Text style={styles.sectionTitle}>Dúvidas frequentes</Text>
 
           <Text style={styles.faqQuestion}>
             Como faço um agendamento?
           </Text>
 
           <Text style={styles.faqAnswer}>
-            Acesse a tela inicial, escolha o serviço desejado
-            e siga as etapas do agendamento.
+            Acesse a tela inicial, escolha o serviço desejado e siga
+            as etapas do agendamento.
           </Text>
 
           <View style={styles.separator} />
@@ -229,8 +280,8 @@ export default function HelpSupportScreen({ navigate }: Props) {
           </Text>
 
           <Text style={styles.faqAnswer}>
-            Acesse a área de pedidos e selecione o pedido
-            para consultar o andamento.
+            Acesse a área de pedidos e selecione o pedido para
+            consultar o andamento.
           </Text>
 
           <View style={styles.separator} />
@@ -240,8 +291,8 @@ export default function HelpSupportScreen({ navigate }: Props) {
           </Text>
 
           <Text style={styles.faqAnswer}>
-            Entre em contato com nossa equipe pelo WhatsApp
-            para receber orientação.
+            Entre em contato com nossa equipe pelo WhatsApp para
+            receber orientação.
           </Text>
         </View>
       </ScrollView>
@@ -385,6 +436,16 @@ const styles = StyleSheet.create({
     color: '#142B4A',
     fontSize: 15,
     backgroundColor: '#FFFFFF',
+  },
+
+  inputError: {
+    borderColor: '#D92D20',
+  },
+
+  errorText: {
+    color: '#D92D20',
+    fontSize: 12,
+    marginTop: 5,
   },
 
   messageInput: {
