@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from "react";
 
 import {
   SafeAreaView,
@@ -9,18 +9,18 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
+} from "react-native";
 
-import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
-import { Ionicons } from '@expo/vector-icons';
+import { StatusBar as ExpoStatusBar } from "expo-status-bar";
+import { Ionicons } from "@expo/vector-icons";
 
-import { C } from '../../constants/theme';
-import { styles } from '../../styles/globalStyles';
-import Field from '../../components/Field';
-import Brand from '../../components/Brand';
-import PrimaryButton from '../../components/PrimaryButton';
+import { C } from "../../constants/theme";
+import { styles } from "../../styles/globalStyles";
+import Field from "../../components/Field";
+import Brand from "../../components/Brand";
+import PrimaryButton from "../../components/PrimaryButton";
 
-import type { Navigate } from '../../types';
+import type { Navigate } from "../../types";
 
 type Props = {
   email: string;
@@ -41,6 +41,32 @@ export default function LoginScreen({
   navigate,
   showHome,
 }: Props) {
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const validateAndLogin = () => {
+    let valid = true;
+
+    setEmailError("");
+    setPasswordError("");
+
+    if (!email.trim()) {
+      setEmailError("O e-mail é obrigatório.");
+      valid = false;
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setEmailError("Informe um e-mail válido.");
+      valid = false;
+    }
+
+    if (!password.trim()) {
+      setPasswordError("A senha é obrigatória.");
+      valid = false;
+    }
+
+    if (valid) {
+      login();
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -48,13 +74,12 @@ export default function LoginScreen({
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.authScroll}
           keyboardShouldPersistTaps="handled"
         >
-
           <View style={styles.authHero}>
             <Brand />
 
@@ -62,23 +87,15 @@ export default function LoginScreen({
               <View style={styles.bubbleOne} />
               <View style={styles.bubbleTwo} />
 
-              <Ionicons
-                name="shirt"
-                size={74}
-                color={C.blue}
-              />
+              <Ionicons name="shirt" size={74} color={C.blue} />
 
               <View style={styles.heroCheck}>
-                <Ionicons
-                  name="checkmark"
-                  size={19}
-                  color="#fff"
-                />
+                <Ionicons name="checkmark" size={19} color="#fff" />
               </View>
             </View>
 
             <Text style={styles.authTitle}>
-              Roupa limpa.{'\n'}Tempo livre.
+              Roupa limpa.{"\n"}Tempo livre.
             </Text>
 
             <Text style={styles.authSubtitle}>
@@ -87,38 +104,54 @@ export default function LoginScreen({
           </View>
 
           <View style={styles.authCard}>
-
-            <Text style={styles.cardTitle}>
-              Bem-vindo de volta
-            </Text>
+            <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
 
             <Text style={styles.cardSubtitle}>
               Entre para agendar sua próxima coleta.
             </Text>
 
+            {/* E-MAIL */}
             <Field
               label="E-mail"
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(value) => {
+                setEmail(value);
+                if (emailError) setEmailError("");
+              }}
               placeholder="voce@email.com"
               keyboardType="email-address"
               icon="mail-outline"
             />
 
+            {emailError ? (
+              <Text style={validationStyles.error}>
+                {emailError}
+              </Text>
+            ) : null}
+
+            {/* SENHA */}
             <Field
               label="Senha"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) setPasswordError("");
+              }}
               placeholder="Sua senha"
               secureTextEntry
               icon="lock-closed-outline"
             />
 
-            {/* RECUPERAÇÃO DE SENHA */}
+            {passwordError ? (
+              <Text style={validationStyles.error}>
+                {passwordError}
+              </Text>
+            ) : null}
 
+            {/* RECUPERAÇÃO DE SENHA */}
             <TouchableOpacity
               style={styles.forgot}
-              onPress={() => navigate('forgotPassword')}
+              onPress={() => navigate("forgotPassword")}
               activeOpacity={0.7}
             >
               <Text style={styles.linkText}>
@@ -128,21 +161,17 @@ export default function LoginScreen({
 
             <PrimaryButton
               title="Entrar"
-              onPress={login}
+              onPress={validateAndLogin}
               icon="arrow-forward"
             />
 
             <View style={styles.authFooter}>
               <Text style={styles.mutedText}>
-                Ainda não tem conta?{' '}
+                Ainda não tem conta?{" "}
               </Text>
 
-              <TouchableOpacity
-                onPress={() => navigate('register')}
-              >
-                <Text style={styles.linkText}>
-                  Criar cadastro
-                </Text>
+              <TouchableOpacity onPress={() => navigate("register")}>
+                <Text style={styles.linkText}>Criar cadastro</Text>
               </TouchableOpacity>
             </View>
 
@@ -154,10 +183,19 @@ export default function LoginScreen({
                 Explorar o app de demonstração
               </Text>
             </TouchableOpacity>
-
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
+
+const validationStyles = {
+  error: {
+    color: "#D64545",
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
+};
