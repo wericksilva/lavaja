@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 import {
@@ -38,6 +37,29 @@ type Props = {
   setAccountType: (value: AccountType) => void;
   register: () => void;
   navigate: Navigate;
+};
+
+// Aplica máscara de telefone brasileiro
+const formatPhone = (value: string) => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+
+  if (digits.length === 0) {
+    return '';
+  }
+
+  if (digits.length <= 2) {
+    return `(${digits}`;
+  }
+
+  if (digits.length <= 6) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  }
+
+  if (digits.length <= 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 };
 
 export default function RegisterScreen({
@@ -85,7 +107,7 @@ export default function RegisterScreen({
     if (!phoneDigits) {
       setPhoneError('O celular é obrigatório.');
       valid = false;
-    } else if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+    } else if (phoneDigits.length !== 10 && phoneDigits.length !== 11) {
       setPhoneError('Informe um celular válido com DDD.');
       valid = false;
     }
@@ -265,12 +287,12 @@ export default function RegisterScreen({
             <Text style={validationStyles.error}>{emailError}</Text>
           ) : null}
 
-          {/* CELULAR */}
+          {/* CELULAR COM MÁSCARA */}
           <Field
             label="Celular"
             value={phone}
             onChangeText={(value) => {
-              setPhone(value);
+              setPhone(formatPhone(value));
               if (phoneError) setPhoneError('');
             }}
             placeholder="(11) 99999-9999"

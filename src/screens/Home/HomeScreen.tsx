@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Alert,
   SafeAreaView,
@@ -26,6 +26,16 @@ type Props = {
   setSelectedLaundry: (value: Laundry) => void;
 };
 
+const weeklyRevenue = [
+  { day: 'Seg', value: 180 },
+  { day: 'Ter', value: 250 },
+  { day: 'Qua', value: 210 },
+  { day: 'Qui', value: 320 },
+  { day: 'Sex', value: 280 },
+  { day: 'Sáb', value: 420 },
+  { day: 'Dom', value: 150 },
+];
+
 export default function HomeScreen({
   name,
   setService,
@@ -35,6 +45,7 @@ export default function HomeScreen({
   setSelectedLaundry,
 }: Props) {
   const firstName = name.trim().split(' ')[0] || 'Cliente';
+  const [showDashboard, setShowDashboard] = useState(false);
 
   const startSchedule = (serviceName?: Service) => {
     if (!selectedLaundry) {
@@ -51,6 +62,43 @@ export default function HomeScreen({
 
     navigate('schedule');
   };
+
+  const maxRevenue = Math.max(...weeklyRevenue.map((item) => item.value));
+
+  const dashboardStats = [
+    {
+      title: 'Recebidos hoje',
+      value: '12',
+      icon: 'today-outline' as const,
+      color: '#176B87',
+      background: '#E8F3F6',
+      description: 'Pedidos do dia',
+    },
+    {
+      title: 'Aguardando aprovação',
+      value: '4',
+      icon: 'time-outline' as const,
+      color: '#D99120',
+      background: '#FFF5E3',
+      description: 'Precisam de atenção',
+    },
+    {
+      title: 'Em andamento',
+      value: '8',
+      icon: 'sync-outline' as const,
+      color: '#3976C5',
+      background: '#EAF2FF',
+      description: 'Em processamento',
+    },
+    {
+      title: 'Concluídos',
+      value: '26',
+      icon: 'checkmark-circle-outline' as const,
+      color: '#16865B',
+      background: '#E7F7F1',
+      description: 'Finalizados no mês',
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,7 +122,9 @@ export default function HomeScreen({
 
               <Text style={styles.headerSubtitle}>
                 {isStore
-                  ? 'Gerencie sua lavanderia.'
+                  ? showDashboard
+                    ? 'Visão geral da sua lavanderia.'
+                    : 'Gerencie sua lavanderia.'
                   : 'Vamos cuidar das suas roupas?'}
               </Text>
             </View>
@@ -94,105 +144,372 @@ export default function HomeScreen({
 
           {isStore ? (
             <>
-              {/* Área da lavanderia */}
-              <View style={styles.storeBanner}>
-                <View style={styles.storeBannerIcon}>
-                  <Ionicons
-                    name="storefront-outline"
-                    size={30}
-                    color="#FFFFFF"
-                  />
-                </View>
+              {showDashboard ? (
+                <>
+                  {/* CABEÇALHO DO DASHBOARD */}
+                  <View style={styles.dashboardHeader}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.dashboardTitle}>
+                        Dashboard da lavanderia
+                      </Text>
 
-                <Text style={styles.storeBannerTitle}>
-                  Área da lavanderia
-                </Text>
+                      <Text style={styles.dashboardSubtitle}>
+                        Acompanhe os resultados do seu negócio.
+                      </Text>
+                    </View>
 
-                <Text style={styles.storeBannerDescription}>
-                  Acompanhe seus pedidos e gerencie seus atendimentos em um só lugar.
-                </Text>
+                    <View style={styles.dashboardHeaderIcon}>
+                      <Ionicons
+                        name="analytics-outline"
+                        size={25}
+                        color="#176B87"
+                      />
+                    </View>
+                  </View>
 
-                <TouchableOpacity
-                  style={styles.storeBannerButton}
-                  onPress={() => navigate('admin')}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.storeBannerButtonText}>
-                    Acessar painel
+                  {/* FATURAMENTO */}
+                  <View style={styles.revenueCard}>
+                    <View style={styles.revenueTop}>
+                      <View>
+                        <Text style={styles.revenueLabel}>
+                          Faturamento do mês
+                        </Text>
+
+                        <Text style={styles.revenueValue}>
+                          R$ 8.450,00
+                        </Text>
+                      </View>
+
+                      <View style={styles.revenueIcon}>
+                        <Ionicons
+                          name="wallet-outline"
+                          size={25}
+                          color="#FFFFFF"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.revenueFooter}>
+                      <Ionicons
+                        name="trending-up"
+                        size={17}
+                        color="#B8F0D6"
+                      />
+
+                      <Text style={styles.revenueFooterText}>
+                        +12,5% em relação ao mês anterior
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* INDICADORES */}
+                  <Text style={styles.sectionTitle}>
+                    Resumo dos pedidos
                   </Text>
 
-                  <Ionicons
-                    name="arrow-forward"
-                    size={17}
-                    color="#176B87"
-                  />
-                </TouchableOpacity>
-              </View>
+                  <View style={styles.statsGrid}>
+                    {dashboardStats.map((item) => (
+                      <View key={item.title} style={styles.statCard}>
+                        <View
+                          style={[
+                            styles.statIcon,
+                            { backgroundColor: item.background },
+                          ]}
+                        >
+                          <Ionicons
+                            name={item.icon}
+                            size={22}
+                            color={item.color}
+                          />
+                        </View>
 
-              {/* Atalhos da lavanderia */}
-              <Text style={styles.sectionTitle}>
-                Acesso rápido
-              </Text>
+                        <Text style={styles.statValue}>
+                          {item.value}
+                        </Text>
 
-              <View style={styles.quickActions}>
-                <TouchableOpacity
-                  style={styles.quickAction}
-                  onPress={() => navigate('admin')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.quickActionIcon}>
+                        <Text style={styles.statTitle}>
+                          {item.title}
+                        </Text>
+
+                        <Text style={styles.statDescription}>
+                          {item.description}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  {/* GRÁFICO */}
+                  <View style={styles.chartCard}>
+                    <View style={styles.chartHeader}>
+                      <View>
+                        <Text style={styles.chartTitle}>
+                          Faturamento semanal
+                        </Text>
+
+                        <Text style={styles.chartSubtitle}>
+                          Últimos 7 dias
+                        </Text>
+                      </View>
+
+                      <View style={styles.chartBadge}>
+                        <Ionicons
+                          name="bar-chart-outline"
+                          size={17}
+                          color="#176B87"
+                        />
+                      </View>
+                    </View>
+
+                    <View style={styles.chart}>
+                      {weeklyRevenue.map((item) => (
+                        <View key={item.day} style={styles.chartColumn}>
+                          <Text style={styles.chartBarValue}>
+                            {item.value}
+                          </Text>
+
+                          <View style={styles.chartBarBackground}>
+                            <View
+                              style={[
+                                styles.chartBar,
+                                {
+                                  height: `${(item.value / maxRevenue) * 100}%`,
+                                },
+                              ]}
+                            />
+                          </View>
+
+                          <Text style={styles.chartDay}>
+                            {item.day}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+
+                    <View style={styles.chartLegend}>
+                      <View style={styles.chartLegendDot} />
+                      <Text style={styles.chartLegendText}>
+                        Faturamento diário em reais
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* ATENÇÃO */}
+                  <View style={styles.pendingCard}>
+                    <View style={styles.pendingIcon}>
+                      <Ionicons
+                        name="notifications-outline"
+                        size={23}
+                        color="#D99120"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.pendingTitle}>
+                        Você tem 4 pedidos pendentes
+                      </Text>
+
+                      <Text style={styles.pendingDescription}>
+                        Existem pedidos aguardando sua aprovação.
+                      </Text>
+                    </View>
+
                     <Ionicons
-                      name="grid-outline"
-                      size={23}
-                      color="#176B87"
+                      name="chevron-forward"
+                      size={20}
+                      color="#D99120"
                     />
                   </View>
 
-                  <Text style={styles.quickActionText}>
-                    Painel
+                  {/* AÇÕES */}
+                  <Text style={styles.sectionTitle}>
+                    Gerenciamento
                   </Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.quickAction}
-                  onPress={() => navigate('orders')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.quickActionIcon}>
+                  <TouchableOpacity
+                    style={styles.managementButton}
+                    onPress={() => navigate('admin')}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.managementIcon}>
+                      <Ionicons
+                        name="settings-outline"
+                        size={22}
+                        color="#176B87"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.managementTitle}>
+                        Área administrativa
+                      </Text>
+
+                      <Text style={styles.managementDescription}>
+                        Gerencie pedidos e atendimentos.
+                      </Text>
+                    </View>
+
                     <Ionicons
-                      name="receipt-outline"
-                      size={23}
+                      name="chevron-forward"
+                      size={20}
+                      color="#8A9AA3"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.managementButton}
+                    onPress={() => navigate('orders')}
+                    activeOpacity={0.8}
+                  >
+                    <View style={styles.managementIcon}>
+                      <Ionicons
+                        name="receipt-outline"
+                        size={22}
+                        color="#176B87"
+                      />
+                    </View>
+
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.managementTitle}>
+                        Visualizar pedidos
+                      </Text>
+
+                      <Text style={styles.managementDescription}>
+                        Consulte o histórico de pedidos.
+                      </Text>
+                    </View>
+
+                    <Ionicons
+                      name="chevron-forward"
+                      size={20}
+                      color="#8A9AA3"
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.backDashboardButton}
+                    onPress={() => setShowDashboard(false)}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name="arrow-back"
+                      size={18}
                       color="#176B87"
                     />
+
+                    <Text style={styles.backDashboardText}>
+                      Voltar à página inicial
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  {/* ÁREA DA LAVANDERIA */}
+                  <View style={styles.storeBanner}>
+                    <View style={styles.storeBannerIcon}>
+                      <Ionicons
+                        name="storefront-outline"
+                        size={30}
+                        color="#FFFFFF"
+                      />
+                    </View>
+
+                    <Text style={styles.storeBannerTitle}>
+                      Área da lavanderia
+                    </Text>
+
+                    <Text style={styles.storeBannerDescription}>
+                      Acompanhe seus pedidos, faturamento e desempenho em um só lugar.
+                    </Text>
+
+                    <TouchableOpacity
+                      style={styles.storeBannerButton}
+                      onPress={() => setShowDashboard(true)}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name="analytics-outline"
+                        size={19}
+                        color="#176B87"
+                      />
+
+                      <Text style={styles.storeBannerButtonText}>
+                        Dashboard da lavanderia
+                      </Text>
+
+                      <Ionicons
+                        name="arrow-forward"
+                        size={17}
+                        color="#176B87"
+                      />
+                    </TouchableOpacity>
                   </View>
 
-                  <Text style={styles.quickActionText}>
-                    Pedidos
+                  {/* ATALHOS */}
+                  <Text style={styles.sectionTitle}>
+                    Acesso rápido
                   </Text>
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.quickAction}
-                  onPress={() => navigate('profile')}
-                  activeOpacity={0.8}
-                >
-                  <View style={styles.quickActionIcon}>
-                    <Ionicons
-                      name="person-outline"
-                      size={23}
-                      color="#176B87"
-                    />
+                  <View style={styles.quickActions}>
+                    <TouchableOpacity
+                      style={styles.quickAction}
+                      onPress={() => setShowDashboard(true)}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.quickActionIcon}>
+                        <Ionicons
+                          name="analytics-outline"
+                          size={23}
+                          color="#176B87"
+                        />
+                      </View>
+
+                      <Text style={styles.quickActionText}>
+                        Dashboard
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickAction}
+                      onPress={() => navigate('admin')}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.quickActionIcon}>
+                        <Ionicons
+                          name="grid-outline"
+                          size={23}
+                          color="#176B87"
+                        />
+                      </View>
+
+                      <Text style={styles.quickActionText}>
+                        Painel
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.quickAction}
+                      onPress={() => navigate('orders')}
+                      activeOpacity={0.8}
+                    >
+                      <View style={styles.quickActionIcon}>
+                        <Ionicons
+                          name="receipt-outline"
+                          size={23}
+                          color="#176B87"
+                        />
+                      </View>
+
+                      <Text style={styles.quickActionText}>
+                        Pedidos
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-
-                  <Text style={styles.quickActionText}>
-                    Perfil
-                  </Text>
-                </TouchableOpacity>
-              </View>
+                </>
+              )}
             </>
           ) : (
             <>
-              {/* Banner promocional */}
+              {/* BANNER PROMOCIONAL */}
               <View style={styles.promoCard}>
                 <View style={styles.promoContent}>
                   <View style={styles.promoPill}>
@@ -232,6 +549,7 @@ export default function HomeScreen({
                     size={62}
                     color="#FFFFFF"
                   />
+
                   <Ionicons
                     name="sparkles"
                     size={23}
@@ -241,7 +559,7 @@ export default function HomeScreen({
                 </View>
               </View>
 
-              {/* Escolha da lavanderia */}
+              {/* ESCOLHA DA LAVANDERIA */}
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderText}>
                   <Text style={styles.sectionTitle}>
@@ -286,7 +604,10 @@ export default function HomeScreen({
                         styles.laundryCard,
                         isSelected && styles.laundryCardSelected,
                       ]}
-                      onPress={() => setSelectedLaundry(laundry)}
+                      onPress={() => {
+                        setSelectedLaundry(laundry);
+                        navigate('laundryDetails');
+                      }}
                       activeOpacity={0.85}
                     >
                       <View style={styles.laundryIcon}>
@@ -323,6 +644,7 @@ export default function HomeScreen({
                               size={14}
                               color="#F2B544"
                             />
+
                             <Text style={styles.detailText}>
                               {laundry.rating}
                             </Text>
@@ -334,6 +656,7 @@ export default function HomeScreen({
                               size={14}
                               color="#73818B"
                             />
+
                             <Text style={styles.detailText}>
                               {laundry.distance} · {laundry.address}
                             </Text>
@@ -360,7 +683,7 @@ export default function HomeScreen({
                 })}
               </View>
 
-              {/* Serviços */}
+              {/* SERVIÇOS */}
               <View style={styles.sectionHeader}>
                 <View style={styles.sectionHeaderText}>
                   <Text style={styles.sectionTitle}>
@@ -418,7 +741,7 @@ export default function HomeScreen({
                 ))}
               </View>
 
-              {/* Como funciona */}
+              {/* COMO FUNCIONA */}
               <Text style={styles.sectionTitle}>
                 Como funciona
               </Text>
@@ -433,9 +756,7 @@ export default function HomeScreen({
                     />
                   </View>
 
-                  <Text style={styles.stepTitle}>
-                    1. Escolha
-                  </Text>
+                  <Text style={styles.stepTitle}>1. Escolha</Text>
 
                   <Text style={styles.stepDescription}>
                     Selecione a lavanderia e o serviço.
@@ -451,9 +772,7 @@ export default function HomeScreen({
                     />
                   </View>
 
-                  <Text style={styles.stepTitle}>
-                    2. Agende
-                  </Text>
+                  <Text style={styles.stepTitle}>2. Agende</Text>
 
                   <Text style={styles.stepDescription}>
                     Escolha o melhor horário para coleta.
@@ -469,9 +788,7 @@ export default function HomeScreen({
                     />
                   </View>
 
-                  <Text style={styles.stepTitle}>
-                    3. Receba
-                  </Text>
+                  <Text style={styles.stepTitle}>3. Receba</Text>
 
                   <Text style={styles.stepDescription}>
                     Receba suas roupas limpas em casa.
@@ -482,11 +799,14 @@ export default function HomeScreen({
           )}
         </ScrollView>
 
-        {/* Navegação inferior */}
+        {/* NAVEGAÇÃO INFERIOR */}
         <View style={styles.bottomNav}>
           <TouchableOpacity
             style={styles.navItem}
-            onPress={() => navigate('home')}
+            onPress={() => {
+              setShowDashboard(false);
+              navigate('home');
+            }}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -494,6 +814,7 @@ export default function HomeScreen({
               size={22}
               color="#176B87"
             />
+
             <Text style={[styles.navText, styles.navTextActive]}>
               Início
             </Text>
@@ -509,6 +830,7 @@ export default function HomeScreen({
               size={22}
               color="#83919A"
             />
+
             <Text style={styles.navText}>
               Pedidos
             </Text>
@@ -524,6 +846,7 @@ export default function HomeScreen({
               size={22}
               color="#83919A"
             />
+
             <Text style={styles.navText}>
               Perfil
             </Text>
@@ -580,6 +903,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  // CLIENTE
   promoCard: {
     backgroundColor: '#176B87',
     borderRadius: 20,
@@ -843,6 +1168,8 @@ const styles = StyleSheet.create({
     lineHeight: 15,
     marginTop: 5,
   },
+
+  // HOME DA LAVANDERIA
   storeBanner: {
     backgroundColor: '#176B87',
     borderRadius: 20,
@@ -873,11 +1200,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     backgroundColor: '#FFFFFF',
     borderRadius: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 8,
     marginTop: 18,
   },
   storeBannerButtonText: {
@@ -910,9 +1237,275 @@ const styles = StyleSheet.create({
   },
   quickActionText: {
     color: '#18323E',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
+
+  // DASHBOARD
+  dashboardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dashboardTitle: {
+    color: '#18323E',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  dashboardSubtitle: {
+    color: '#7B8A92',
+    fontSize: 12,
+    marginTop: 5,
+  },
+  dashboardHeaderIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 15,
+    backgroundColor: '#E8F3F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
+  },
+  revenueCard: {
+    backgroundColor: '#176B87',
+    borderRadius: 18,
+    padding: 19,
+    marginBottom: 25,
+  },
+  revenueTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  revenueLabel: {
+    color: '#DCEFF4',
+    fontSize: 13,
+  },
+  revenueValue: {
+    color: '#FFFFFF',
+    fontSize: 29,
+    fontWeight: '800',
+    marginTop: 8,
+  },
+  revenueIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.17)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  revenueFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    marginTop: 17,
+    paddingTop: 13,
+  },
+  revenueFooterText: {
+    color: '#B8F0D6',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 10,
+    marginBottom: 25,
+  },
+  statCard: {
+    width: '48%',
+    flexGrow: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#E8EEF1',
+    padding: 14,
+    minHeight: 145,
+  },
+  statIcon: {
+    width: 39,
+    height: 39,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  statValue: {
+    color: '#18323E',
+    fontSize: 25,
+    fontWeight: '800',
+  },
+  statTitle: {
+    color: '#344B57',
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 3,
+  },
+  statDescription: {
+    color: '#8A9AA3',
+    fontSize: 10,
+    marginTop: 5,
+  },
+  chartCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 17,
+    borderWidth: 1,
+    borderColor: '#E8EEF1',
+    padding: 17,
+    marginBottom: 20,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  chartTitle: {
+    color: '#18323E',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  chartSubtitle: {
+    color: '#8A9AA3',
+    fontSize: 11,
+    marginTop: 4,
+  },
+  chartBadge: {
+    width: 37,
+    height: 37,
+    borderRadius: 11,
+    backgroundColor: '#E8F3F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chart: {
+    height: 175,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-around',
+    marginTop: 22,
+  },
+  chartColumn: {
+    flex: 1,
+    alignItems: 'center',
+    height: '100%',
+    justifyContent: 'flex-end',
+  },
+  chartBarValue: {
+    color: '#71838D',
+    fontSize: 9,
+    marginBottom: 7,
+  },
+  chartBarBackground: {
+    width: 20,
+    height: 115,
+    backgroundColor: '#EDF3F5',
+    borderRadius: 8,
+    justifyContent: 'flex-end',
+    overflow: 'hidden',
+  },
+  chartBar: {
+    width: '100%',
+    backgroundColor: '#20A6A6',
+    borderRadius: 8,
+  },
+  chartDay: {
+    color: '#71838D',
+    fontSize: 10,
+    marginTop: 8,
+  },
+  chartLegend: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    marginTop: 17,
+  },
+  chartLegendDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#20A6A6',
+  },
+  chartLegendText: {
+    color: '#8A9AA3',
+    fontSize: 10,
+  },
+  pendingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF8E9',
+    borderWidth: 1,
+    borderColor: '#F7E5BF',
+    borderRadius: 15,
+    padding: 14,
+    gap: 11,
+    marginBottom: 25,
+  },
+  pendingIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    backgroundColor: '#FFEDC8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pendingTitle: {
+    color: '#8B5C13',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  pendingDescription: {
+    color: '#A17A3D',
+    fontSize: 10,
+    marginTop: 4,
+  },
+  managementButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8EEF1',
+    padding: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 10,
+  },
+  managementIcon: {
+    width: 43,
+    height: 43,
+    borderRadius: 12,
+    backgroundColor: '#E8F3F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  managementTitle: {
+    color: '#18323E',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  managementDescription: {
+    color: '#8A9AA3',
+    fontSize: 10,
+    marginTop: 4,
+  },
+  backDashboardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 15,
+    marginTop: 12,
+  },
+  backDashboardText: {
+    color: '#176B87',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+
+  // NAVEGAÇÃO
   bottomNav: {
     height: 67,
     backgroundColor: '#FFFFFF',

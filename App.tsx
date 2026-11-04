@@ -3,7 +3,7 @@ import { Alert } from 'react-native';
 
 import type { Screen, Service, PaymentMethod } from './src/types';
 import { services } from './src/data/services';
-import { type Laundry } from './src/data/laundries';
+import type { Laundry } from './src/data/laundries';
 
 import LoginScreen from './src/screens/Login/LoginScreen';
 import RegisterScreen, {
@@ -19,6 +19,7 @@ import HelpSupportScreen from './src/screens/HelpSupport/HelpSupportScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScreen';
 import TrackingScreen from './src/screens/Tracking/TrackingScreen';
 import AdminScreen from './src/screens/Admin/AdminScreen';
+import LaundryDetailsScreen from './src/screens/LaundryDetails/LaundryDetailsScreen';
 
 import type { LaundryOrder } from './src/types/order';
 
@@ -31,10 +32,10 @@ export default function App() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
 
-  // Tipo de conta: cliente ou lavanderia
+  // Tipo de conta
   const [accountType, setAccountType] = useState<AccountType>('client');
 
-  // Lavanderia escolhida pelo cliente
+  // Lavanderia selecionada
   const [selectedLaundry, setSelectedLaundry] = useState<Laundry | null>(null);
 
   // Dados do pedido
@@ -48,6 +49,7 @@ export default function App() {
 
   const [orderNumber, setOrderNumber] = useState('');
 
+  // Pedidos
   const [orders, setOrders] = useState<LaundryOrder[]>([
     {
       id: 'LJ-2048',
@@ -80,7 +82,7 @@ export default function App() {
   const selectedService =
     services.find((item) => item.name === service) ?? services[0];
 
-  // Serviço + taxa da lavanderia escolhida
+  // Serviço + taxa de entrega da lavanderia
   const total = useMemo(
     () => selectedService.price + (selectedLaundry?.deliveryFee ?? 8.90),
     [selectedService, selectedLaundry],
@@ -212,7 +214,7 @@ export default function App() {
     setTime('14h–16h');
     setPayment('Pix');
 
-    // Mantém a lavanderia selecionada para facilitar um novo pedido
+    // Mantém a lavanderia escolhida
     setScreen('home');
   };
 
@@ -243,7 +245,6 @@ export default function App() {
       );
 
     case 'admin':
-      // Apenas contas de lavanderia podem acessar o painel
       if (accountType !== 'store') {
         return (
           <HomeScreen
@@ -333,6 +334,28 @@ export default function App() {
           isStore={accountType === 'store'}
           selectedLaundry={selectedLaundry}
           setSelectedLaundry={setSelectedLaundry}
+        />
+      );
+
+    case 'laundryDetails':
+      if (!selectedLaundry) {
+        return (
+          <HomeScreen
+            name={name}
+            setService={setService}
+            navigate={setScreen}
+            isStore={accountType === 'store'}
+            selectedLaundry={selectedLaundry}
+            setSelectedLaundry={setSelectedLaundry}
+          />
+        );
+      }
+
+      return (
+        <LaundryDetailsScreen
+          laundry={selectedLaundry}
+          setService={setService}
+          navigate={setScreen}
         />
       );
 

@@ -270,18 +270,21 @@ export default function OrdersScreen({
           />
         </View>
 
-        <TouchableOpacity
-          style={styles.newOrder}
-          onPress={() => navigate('schedule')}
-          activeOpacity={0.8}
-        >
-          <Ionicons
-            name="add-circle-outline"
-            size={20}
-            color={C.white}
-          />
-          <Text style={styles.newOrderText}>Fazer novo pedido</Text>
-        </TouchableOpacity>
+        {/* Novo pedido aparece somente para clientes */}
+        {!isStore && (
+          <TouchableOpacity
+            style={styles.newOrder}
+            onPress={() => navigate('schedule')}
+            activeOpacity={0.8}
+          >
+            <Ionicons
+              name="add-circle-outline"
+              size={20}
+              color={C.white}
+            />
+            <Text style={styles.newOrderText}>Fazer novo pedido</Text>
+          </TouchableOpacity>
+        )}
 
         <Text style={styles.demoNote}>
           Pedidos ilustrativos para demonstração. O histórico real será
