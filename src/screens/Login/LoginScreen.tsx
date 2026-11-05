@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 import {
   SafeAreaView,
@@ -9,18 +9,18 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from "react-native";
+} from 'react-native';
 
-import { StatusBar as ExpoStatusBar } from "expo-status-bar";
-import { Ionicons } from "@expo/vector-icons";
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { Ionicons } from '@expo/vector-icons';
 
-import { C } from "../../constants/theme";
-import { styles } from "../../styles/globalStyles";
-import Field from "../../components/Field";
-import Brand from "../../components/Brand";
-import PrimaryButton from "../../components/PrimaryButton";
+import { C } from '../../constants/theme';
+import { styles } from '../../styles/globalStyles';
+import Field from '../../components/Field';
+import Brand from '../../components/Brand';
+import PrimaryButton from '../../components/PrimaryButton';
 
-import type { Navigate } from "../../types";
+import type { Navigate } from '../../types';
 
 type Props = {
   email: string;
@@ -41,25 +41,27 @@ export default function LoginScreen({
   navigate,
   showHome,
 }: Props) {
-  const [emailError, setEmailError] = useState("");
-  const [passwordError, setPasswordError] = useState("");
+  const [emailError, setEmailError] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const validateAndLogin = () => {
     let valid = true;
 
-    setEmailError("");
-    setPasswordError("");
+    setEmailError('');
+    setPasswordError('');
 
     if (!email.trim()) {
-      setEmailError("O e-mail é obrigatório.");
+      setEmailError('O e-mail é obrigatório.');
       valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setEmailError("Informe um e-mail válido.");
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
+      setEmailError('Informe um e-mail válido.');
       valid = false;
     }
 
     if (!password.trim()) {
-      setPasswordError("A senha é obrigatória.");
+      setPasswordError('A senha é obrigatória.');
       valid = false;
     }
 
@@ -74,14 +76,15 @@ export default function LoginScreen({
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.authScroll}
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.authHero}>
-            <Brand />
+            {/* LOGO CLICÁVEL */}
+            <Brand onPress={showHome} />
 
             <View style={styles.heroIllustration}>
               <View style={styles.bubbleOne} />
@@ -104,7 +107,9 @@ export default function LoginScreen({
           </View>
 
           <View style={styles.authCard}>
-            <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
+            <Text style={styles.cardTitle}>
+              Bem-vindo de volta
+            </Text>
 
             <Text style={styles.cardSubtitle}>
               Entre para agendar sua próxima coleta.
@@ -116,7 +121,7 @@ export default function LoginScreen({
               value={email}
               onChangeText={(value) => {
                 setEmail(value);
-                if (emailError) setEmailError("");
+                if (emailError) setEmailError('');
               }}
               placeholder="voce@email.com"
               keyboardType="email-address"
@@ -135,7 +140,7 @@ export default function LoginScreen({
               value={password}
               onChangeText={(value) => {
                 setPassword(value);
-                if (passwordError) setPasswordError("");
+                if (passwordError) setPasswordError('');
               }}
               placeholder="Sua senha"
               secureTextEntry
@@ -151,7 +156,7 @@ export default function LoginScreen({
             {/* RECUPERAÇÃO DE SENHA */}
             <TouchableOpacity
               style={styles.forgot}
-              onPress={() => navigate("forgotPassword")}
+              onPress={() => navigate('forgotPassword')}
               activeOpacity={0.7}
             >
               <Text style={styles.linkText}>
@@ -167,17 +172,23 @@ export default function LoginScreen({
 
             <View style={styles.authFooter}>
               <Text style={styles.mutedText}>
-                Ainda não tem conta?{" "}
+                Ainda não tem conta?{' '}
               </Text>
 
-              <TouchableOpacity onPress={() => navigate("register")}>
-                <Text style={styles.linkText}>Criar cadastro</Text>
+              <TouchableOpacity
+                onPress={() => navigate('register')}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.linkText}>
+                  Criar cadastro
+                </Text>
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity
               onPress={showHome}
               style={styles.demoLink}
+              activeOpacity={0.7}
             >
               <Text style={styles.demoText}>
                 Explorar o app de demonstração
@@ -192,7 +203,7 @@ export default function LoginScreen({
 
 const validationStyles = {
   error: {
-    color: "#D64545",
+    color: '#D64545',
     fontSize: 12,
     marginTop: -8,
     marginBottom: 12,

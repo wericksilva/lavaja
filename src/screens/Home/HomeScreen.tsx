@@ -94,7 +94,7 @@ export default function HomeScreen({
       title: 'Concluídos',
       value: '26',
       icon: 'checkmark-circle-outline' as const,
-      color: '#16865B',
+       color: '#16865B',
       background: '#E7F7F1',
       description: 'Finalizados no mês',
     },
@@ -112,9 +112,19 @@ export default function HomeScreen({
           {/* Cabeçalho */}
           <View style={styles.header}>
             <View>
-              <Text style={styles.brand}>
-                Lava<Text style={styles.brandHighlight}>Já</Text>
-              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setShowDashboard(false);
+                  navigate('home');
+                }}
+                activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Voltar para a tela inicial do LavaJá"
+              >
+                <Text style={styles.brand}>
+                  Lava<Text style={styles.brandHighlight}>Já</Text>
+                </Text>
+              </TouchableOpacity>
 
               <Text style={styles.greeting}>
                 Olá, {firstName}! 👋
@@ -159,7 +169,7 @@ export default function HomeScreen({
                     </View>
 
                     <View style={styles.dashboardHeaderIcon}>
-                      <Ionicons
+                       <Ionicons
                         name="analytics-outline"
                         size={25}
                         color="#176B87"
@@ -344,7 +354,7 @@ export default function HomeScreen({
                       </Text>
 
                       <Text style={styles.managementDescription}>
-                        Gerencie pedidos e atendimentos.
+                         Gerencie pedidos e atendimentos.
                       </Text>
                     </View>
 
@@ -422,7 +432,7 @@ export default function HomeScreen({
                     </Text>
 
                     <TouchableOpacity
-                      style={styles.storeBannerButton}
+                    style={styles.storeBannerButton}
                       onPress={() => setShowDashboard(true)}
                       activeOpacity={0.8}
                     >
@@ -503,7 +513,7 @@ export default function HomeScreen({
                         Pedidos
                       </Text>
                     </TouchableOpacity>
-                  </View>
+                     </View>
                 </>
               )}
             </>
@@ -584,7 +594,7 @@ export default function HomeScreen({
                     name="checkmark-circle"
                     size={19}
                     color="#16865B"
-                  />
+                    />
 
                   <Text style={styles.selectedNoticeText}>
                     Lavanderia selecionada: {selectedLaundry.name}
@@ -696,7 +706,7 @@ export default function HomeScreen({
                 </View>
 
                 <Ionicons
-                  name="shirt-outline"
+                 name="shirt-outline"
                   size={22}
                   color="#176B87"
                 />
@@ -1032,7 +1042,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F3F6',
     alignItems: 'center',
     justifyContent: 'center',
-  },
+    },
   laundryInfo: {
     flex: 1,
   },
@@ -1161,7 +1171,7 @@ const styles = StyleSheet.create({
     color: '#18323E',
     fontSize: 11,
     fontWeight: '800',
-  },
+    },
   stepDescription: {
     color: '#7B8A92',
     fontSize: 10,
@@ -1302,7 +1312,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.2)',
     marginTop: 17,
-    paddingTop: 13,
+     paddingTop: 13,
   },
   revenueFooterText: {
     color: '#B8F0D6',
@@ -1422,7 +1432,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 7,
     marginTop: 17,
-  },
+     },
   chartLegendDot: {
     width: 8,
     height: 8,
