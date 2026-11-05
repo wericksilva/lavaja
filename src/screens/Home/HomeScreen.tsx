@@ -536,21 +536,7 @@ export default function HomeScreen({
                     Escolha uma lavanderia, agende a coleta e deixe o resto com a gente.
                   </Text>
 
-                  <TouchableOpacity
-                    style={styles.promoButton}
-                    onPress={() => startSchedule()}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.promoButtonText}>
-                      Agendar coleta
-                    </Text>
-
-                    <Ionicons
-                      name="arrow-forward"
-                      size={17}
-                      color="#FFFFFF"
-                    />
-                  </TouchableOpacity>
+                 
                 </View>
 
                 <View style={styles.promoIllustration}>
@@ -693,63 +679,6 @@ export default function HomeScreen({
                 })}
               </View>
 
-              {/* SERVIÇOS */}
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionHeaderText}>
-                  <Text style={styles.sectionTitle}>
-                    Nossos serviços
-                  </Text>
-
-                  <Text style={styles.sectionSubtitle}>
-                    Escolha o serviço que você precisa.
-                  </Text>
-                </View>
-
-                <Ionicons
-                 name="shirt-outline"
-                  size={22}
-                  color="#176B87"
-                />
-              </View>
-
-              <View style={styles.serviceList}>
-                {services.map((item) => (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={styles.serviceCard}
-                    onPress={() => startSchedule(item.name)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.serviceIcon}>
-                      <Ionicons
-                        name="shirt-outline"
-                        size={24}
-                        color="#176B87"
-                      />
-                    </View>
-
-                    <View style={styles.serviceInfo}>
-                      <Text style={styles.serviceName}>
-                        {item.name}
-                      </Text>
-
-                      <Text style={styles.serviceDescription}>
-                        {item.description}
-                      </Text>
-
-                      <Text style={styles.servicePrice}>
-                        A partir de {money(item.price)}
-                      </Text>
-                    </View>
-
-                    <Ionicons
-                      name="chevron-forward"
-                      size={21}
-                      color="#8A9AA3"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               {/* COMO FUNCIONA */}
 <View style={styles.howItWorksSection}>
