@@ -752,59 +752,75 @@ export default function HomeScreen({
               </View>
 
               {/* COMO FUNCIONA */}
-              <Text style={styles.sectionTitle}>
-                Como funciona
-              </Text>
+<View style={styles.howItWorksSection}>
+  <Text style={styles.sectionTitle}>Como funciona</Text>
 
-              <View style={styles.stepsContainer}>
-                <View style={styles.step}>
-                  <View style={styles.stepIcon}>
-                    <Ionicons
-                      name="storefront-outline"
-                      size={23}
-                      color="#176B87"
-                    />
-                  </View>
+  <Text style={styles.howItWorksSubtitle}>
+    É simples cuidar das suas roupas com a LavaJá.
+  </Text>
 
-                  <Text style={styles.stepTitle}>1. Escolha</Text>
+  <View style={styles.stepsContainer}>
+    <View style={styles.step}>
+      <View style={styles.stepNumber}>
+        <Text style={styles.stepNumberText}>1</Text>
+      </View>
 
-                  <Text style={styles.stepDescription}>
-                    Selecione a lavanderia e o serviço.
-                  </Text>
-                </View>
+      <View style={styles.stepIcon}>
+        <Ionicons
+          name="storefront-outline"
+          size={25}
+          color="#176B87"
+        />
+      </View>
 
-                <View style={styles.step}>
-                  <View style={styles.stepIcon}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={23}
-                      color="#176B87"
-                    />
-                  </View>
+      <Text style={styles.stepTitle}>Escolha</Text>
 
-                  <Text style={styles.stepTitle}>2. Agende</Text>
+      <Text style={styles.stepDescription}>
+        Selecione a lavanderia e o serviço desejado.
+      </Text>
+    </View>
 
-                  <Text style={styles.stepDescription}>
-                    Escolha o melhor horário para coleta.
-                  </Text>
-                </View>
+    <View style={styles.step}>
+      <View style={styles.stepNumber}>
+        <Text style={styles.stepNumberText}>2</Text>
+      </View>
 
-                <View style={styles.step}>
-                  <View style={styles.stepIcon}>
-                    <Ionicons
-                      name="checkmark-done-outline"
-                      size={23}
-                      color="#176B87"
-                    />
-                  </View>
+      <View style={styles.stepIcon}>
+        <Ionicons
+          name="calendar-outline"
+          size={25}
+          color="#176B87"
+        />
+      </View>
 
-                  <Text style={styles.stepTitle}>3. Receba</Text>
+      <Text style={styles.stepTitle}>Agende</Text>
 
-                  <Text style={styles.stepDescription}>
-                    Receba suas roupas limpas em casa.
-                  </Text>
-                </View>
-              </View>
+      <Text style={styles.stepDescription}>
+        Escolha o melhor dia e horário para a coleta.
+      </Text>
+    </View>
+
+    <View style={styles.step}>
+      <View style={styles.stepNumber}>
+        <Text style={styles.stepNumberText}>3</Text>
+      </View>
+
+      <View style={styles.stepIcon}>
+        <Ionicons
+          name="checkmark-done-outline"
+          size={25}
+          color="#176B87"
+        />
+      </View>
+
+      <Text style={styles.stepTitle}>Receba</Text>
+
+      <Text style={styles.stepDescription}>
+        Receba suas roupas limpas e prontas em casa.
+      </Text>
+    </View>
+  </View>
+</View>
             </>
           )}
         </ScrollView>
@@ -1144,41 +1160,79 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     marginTop: 7,
   },
-  stepsContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    marginTop: 10,
-    marginBottom: 15,
-  },
-  step: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 11,
-    borderWidth: 1,
-    borderColor: '#E8EEF1',
-  },
-  stepIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#E8F3F6',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
-  },
-  stepTitle: {
-    color: '#18323E',
-    fontSize: 11,
-    fontWeight: '800',
-    },
-  stepDescription: {
-    color: '#7B8A92',
-    fontSize: 10,
-    lineHeight: 15,
-    marginTop: 5,
-  },
+  howItWorksSection: {
+  marginTop: 5,
+  marginBottom: 20,
+},
 
+howItWorksSubtitle: {
+  color: '#7B8A92',
+  fontSize: 12,
+  marginTop: -1,
+  marginBottom: 17,
+},
+
+stepsContainer: {
+  flexDirection: 'row',
+  gap: 10,
+  marginTop: 5,
+},
+
+step: {
+  flex: 1,
+  minHeight: 190,
+  backgroundColor: '#FFFFFF',
+  borderRadius: 16,
+  paddingHorizontal: 10,
+  paddingVertical: 15,
+  borderWidth: 1,
+  borderColor: '#E8EEF1',
+  alignItems: 'center',
+},
+
+stepNumber: {
+  position: 'absolute',
+  top: 9,
+  right: 9,
+  width: 23,
+  height: 23,
+  borderRadius: 12,
+  backgroundColor: '#E8F3F6',
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+stepNumberText: {
+  color: '#176B87',
+  fontSize: 11,
+  fontWeight: '800',
+},
+
+stepIcon: {
+  width: 49,
+  height: 49,
+  borderRadius: 15,
+  backgroundColor: '#E8F3F6',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: 9,
+  marginBottom: 13,
+},
+
+stepTitle: {
+  color: '#18323E',
+  fontSize: 13,
+  fontWeight: '800',
+  textAlign: 'center',
+},
+
+stepDescription: {
+  color: '#7B8A92',
+  fontSize: 10,
+  lineHeight: 15,
+  marginTop: 7,
+  textAlign: 'center',
+},
   // HOME DA LAVANDERIA
   storeBanner: {
     backgroundColor: '#176B87',
