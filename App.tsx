@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from 'react';
-import { Alert } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Platform } from 'react-native';
+import { supabase } from './src/lib/supabase';
 
 import type { Screen, Service, PaymentMethod } from './src/types';
 import { services } from './src/data/services';
@@ -41,6 +42,33 @@ export default function App() {
 
   // Tipo de conta
   const [accountType, setAccountType] = useState<AccountType>('client');
+
+  // Restaura a sessão e carrega o perfil salvo no Supabase
+  useEffect(() => {
+    let mounted = true;
+    const restoreSession = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error || !session?.user || !mounted) return;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('name, phone, account_type')
+        .eq('id', session.user.id)
+        .single();
+      if (!mounted) return;
+      if (profileError || !profile) {
+        Alert.alert('Perfil não encontrado', 'Não foi possível carregar os dados da sua conta.');
+        return;
+      }
+      const type: AccountType = profile.account_type === 'store' ? 'store' : 'client';
+      setName(profile.name ?? '');
+      setEmail(session.user.email ?? '');
+      setPhone(profile.phone ?? '');
+      setAccountType(type);
+      setScreen(type === 'store' ? 'admin' : 'home');
+    };
+    void restoreSession();
+    return () => { mounted = false; };
+  }, []);
 
   // Lavanderia selecionada
   const [selectedLaundry, setSelectedLaundry] = useState<Laundry | null>(null);
@@ -163,41 +191,165 @@ export default function App() {
     );
   };
 
-  // Login
-  const login = () => {
-    if (!email.trim() || !password.trim()) {
-      Alert.alert(
-        'Falta preencher',
-        'Informe seu e-mail e sua senha para continuar.',
-      );
-      return;
-    }
-
-    setName((currentName) => currentName.trim() || 'Cliente');
-
-    if (accountType === 'store') {
-      setScreen('admin');
+  // Exibe mensagens tanto no navegador quanto no aplicativo
+  const showAppMessage = (title: string, message: string) => {
+    if (Platform.OS === 'web') {
+      window.alert(`${title}\n\n${message}`);
     } else {
-      setScreen('home');
+      Alert.alert(title, message);
     }
   };
 
-  // Cadastro
-  const register = () => {
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !phone.trim() ||
-      !password.trim()
-    ) {
-      Alert.alert(
-        'Falta preencher',
-        'Preencha nome, e-mail, telefone e senha.',
+  // Login com Supabase Auth e recuperação do perfil, se necessário
+  const login = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail || !password) {
+      showAppMessage('Falta preencher', 'Informe seu e-mail e sua senha.');
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (error) {
+      showAppMessage(
+        'Não foi possível entrar',
+        error.message === 'Invalid login credentials'
+          ? 'E-mail ou senha incorretos. Se acabou de se cadastrar, confirme seu e-mail, caso essa opção esteja ativada.'
+          : error.message,
       );
       return;
     }
 
-    setScreen('home');
+    // Primeiro tenta localizar o perfil criado pelo gatilho do banco.
+    const { data: existingProfile, error: profileReadError } = await supabase
+      .from('profiles')
+      .select('id, name, email, phone, account_type')
+      .eq('id', data.user.id)
+      .maybeSingle();
+
+    if (profileReadError) {
+      showAppMessage('Erro ao consultar perfil', profileReadError.message);
+      return;
+    }
+
+    let profile = existingProfile;
+
+    // Recupera contas antigas que foram criadas sem registro em profiles.
+    if (!profile) {
+      const metadata = data.user.user_metadata ?? {};
+      const recoveredName = String(metadata.name ?? '');
+      const recoveredPhone = String(metadata.phone ?? '');
+      const recoveredType: AccountType = metadata.account_type === 'store' ? 'store' : 'client';
+
+      const { data: insertedProfile, error: insertProfileError } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: data.user.id,
+            name: recoveredName,
+            email: data.user.email ?? normalizedEmail,
+            phone: recoveredPhone,
+            account_type: recoveredType,
+          },
+          { onConflict: 'id' },
+        )
+        .select('id, name, email, phone, account_type')
+        .single();
+
+      if (insertProfileError || !insertedProfile) {
+        showAppMessage(
+          'Perfil não encontrado',
+          insertProfileError?.message ?? 'Não foi possível criar o perfil. Confira as políticas da tabela profiles no Supabase.',
+        );
+        return;
+      }
+
+      profile = insertedProfile;
+    }
+
+    const type: AccountType = profile.account_type === 'store' ? 'store' : 'client';
+    setName(profile.name ?? '');
+    setEmail(data.user.email ?? normalizedEmail);
+    setPhone(profile.phone ?? '');
+    setAccountType(type);
+    setPassword('');
+    setScreen(type === 'store' ? 'admin' : 'home');
+  };
+
+  // Cadastro no Supabase Auth. O trigger SQL cria o registro em profiles.
+  const register = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedName = name.trim();
+    const phoneDigits = phone.replace(/\D/g, '');
+
+    if (!normalizedName || !normalizedEmail || !phoneDigits || !password) {
+      showAppMessage('Falta preencher', 'Preencha nome, e-mail, celular e senha.');
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          data: {
+            name: normalizedName,
+            phone: phoneDigits,
+            account_type: accountType,
+          },
+        },
+      });
+
+      if (error) {
+        showAppMessage(
+          'Não foi possível criar a conta',
+          error.message.toLowerCase().includes('already registered')
+            ? 'Este e-mail já está cadastrado. Tente entrar pela tela de login.'
+            : error.message,
+        );
+        return;
+      }
+
+      if (!data.user) {
+        showAppMessage('Cadastro não concluído', 'O Supabase não retornou o usuário. Tente novamente.');
+        return;
+      }
+
+      // Se a confirmação estiver desativada, o Supabase abre uma sessão.
+      // Encerramos essa sessão para cumprir o fluxo solicitado: voltar ao login.
+      if (data.session) {
+        const { error: signOutError } = await supabase.auth.signOut();
+        if (signOutError) {
+          showAppMessage(
+            'Conta criada',
+            `Sua conta foi criada, mas não foi possível encerrar a sessão automaticamente: ${signOutError.message}. Você já pode entrar.`,
+          );
+        }
+      }
+
+      setEmail(normalizedEmail);
+      setPassword('');
+      setName('');
+      setPhone('');
+      setAccountType('client');
+      setScreen('login');
+
+      showAppMessage(
+        'Cadastro realizado com sucesso!',
+        data.session
+          ? 'Sua conta foi criada. Agora entre usando o e-mail e a senha cadastrados.'
+          : 'Sua conta foi criada. Confira seu e-mail e confirme o cadastro antes de entrar.',
+      );
+    } catch (error) {
+      showAppMessage(
+        'Erro ao criar conta',
+        error instanceof Error ? error.message : 'Ocorreu um erro inesperado. Tente novamente.',
+      );
+    }
   };
 
   // Continua para o pagamento
