@@ -123,6 +123,13 @@ export default function ScheduleScreen({
       setTimeDraftError('Informe um horário válido entre 00:00 e 23:59.');
       return;
     }
+    if (date === todayISO) {
+      const selectedDateTime = new Date(`${date}T${timeDraft}:00`);
+      if (selectedDateTime.getTime() <= Date.now()) {
+        setTimeDraftError('Escolha um horário futuro para a coleta.');
+        return;
+      }
+    }
     setTime(timeDraft);
     setErroHorario('');
     setTimePickerVisible(false);
@@ -218,7 +225,15 @@ export default function ScheduleScreen({
     }
 
     if (!time) {
-      setErroHorario('Selecione uma janela de horário.');
+      setErroHorario('Selecione um horário para a coleta.');
+      valido = false;
+    } else if (date === todayISO && new Date(`${date}T${time}:00`).getTime() <= Date.now()) {
+      setErroHorario('O horário escolhido já passou. Selecione um horário futuro.');
+      valido = false;
+    }
+
+    if (date && date < todayISO) {
+      setErroData('A data da coleta não pode estar no passado.');
       valido = false;
     }
 

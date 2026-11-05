@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -39,6 +40,7 @@ type Props = {
     comment: string,
   ) => Promise<boolean>;
   onNewOrder: () => void;
+  onRefreshOrders: () => Promise<void>;
 };
 
 export default function OrdersScreen({
@@ -49,12 +51,14 @@ export default function OrdersScreen({
   reviews,
   onSubmitReview,
   onNewOrder,
+  onRefreshOrders,
 }: Props) {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
   const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const openReview = (orderId: string) => {
     setReviewOrderId(orderId);
@@ -133,6 +137,24 @@ export default function OrdersScreen({
           Veja o andamento e o histórico dos seus pedidos.
         </Text>
 
+        <TouchableOpacity
+          style={styles.refreshButton}
+          activeOpacity={0.75}
+          disabled={refreshing}
+          onPress={async () => {
+            if (refreshing) return;
+            setRefreshing(true);
+            try {
+              await onRefreshOrders();
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+        >
+          {refreshing ? <ActivityIndicator size="small" color={C.blue} /> : <Ionicons name="refresh-outline" size={18} color={C.blue} />}
+          <Text style={styles.refreshButtonText}>{refreshing ? 'Atualizando...' : 'Atualizar pedidos'}</Text>
+        </TouchableOpacity>
+
         {orders.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="receipt-outline" size={42} color={C.muted} />
@@ -196,7 +218,7 @@ export default function OrdersScreen({
                           : styles.statusTextActive,
                       ]}
                     >
-                      {isCompleted ? 'Concluído' : 'Em andamento'}
+                      {['Aguardando', 'Coleta agendada', 'Coletado', 'Em lavagem', 'Pronto', 'Entregue'][Math.max(0, Math.min(5, order.currentStep))]}
                     </Text>
                   </View>
                 </View>
@@ -570,6 +592,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
   },
+  refreshButton: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: C.paleBlue,
+  },
+  refreshButtonText: { color: C.blue, fontSize: 12, fontWeight: '800' },
   status: {
     paddingHorizontal: 9,
     paddingVertical: 6,

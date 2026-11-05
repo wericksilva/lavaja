@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
 import { supabase } from './src/lib/supabase';
 import { ensureStoreLaundry, getActiveLaundries, getRelatedOrders, mapDbOrder } from './src/lib/database';
@@ -68,7 +68,7 @@ export default function App() {
       if (error || !session?.user || !mounted) return;
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, name, email, phone, account_type')
+        .select('id, name, email, phone, account_type, default_address')
         .eq('id', session.user.id)
         .maybeSingle();
       if (!mounted) return;
@@ -89,7 +89,7 @@ export default function App() {
             account_type: metadata.account_type === 'store' ? 'store' : 'client',
             default_address: '',
           }, { onConflict: 'id' })
-          .select('id, name, email, phone, account_type')
+          .select('id, name, email, phone, account_type, default_address')
           .single();
 
         if (recoveryError || !recoveredProfile) {
@@ -116,6 +116,7 @@ export default function App() {
       setName(currentProfile.name ?? '');
       setEmail(session.user.email ?? '');
       setPhone(currentProfile.phone ?? '');
+      setAddress(currentProfile.default_address ?? '');
       setAccountType(type);
       await loadWorkspace(session.user.id, type, currentProfile.name ?? '', currentProfile.phone ?? '');
       setScreen('home');
@@ -137,6 +138,8 @@ export default function App() {
   const [instructions, setInstructions] = useState('');
 
   const [orderNumber, setOrderNumber] = useState('');
+  const [creatingOrder, setCreatingOrder] = useState(false);
+  const creatingOrderRef = useRef(false);
 
   // Pedidos
   const [orders, setOrders] = useState<LaundryOrder[]>([]);
@@ -302,6 +305,11 @@ export default function App() {
   // Retorna à tela inicial sem encerrar a sessão
   const goHome = () => {
     setScreen('home');
+  };
+
+  const refreshOrders = async () => {
+    if (!profileId) return;
+    await loadWorkspace(profileId, accountType, name, phone);
   };
 
   // Salva a avaliação no Supabase e só atualiza a interface após confirmar.
@@ -533,6 +541,59 @@ const updateOrderStep = async (value: string) => {
     }
   };
 
+  const saveProfile = async (values: { name: string; phone: string; address: string }): Promise<boolean> => {
+    if (!profileId) {
+      showAppMessage('Sessão inválida', 'Entre novamente para atualizar seu perfil.');
+      return false;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          name: values.name,
+          phone: values.phone.replace(/\D/g, ''),
+          default_address: values.address,
+        })
+        .eq('id', profileId)
+        .select('id')
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) throw new Error('O perfil não foi atualizado. Verifique a política RLS de UPDATE da tabela profiles.');
+
+      setName(values.name);
+      setPhone(values.phone);
+      setAddress(values.address);
+      showAppMessage('Perfil atualizado', 'Seus dados foram salvos com sucesso.');
+      return true;
+    } catch (error) {
+      showAppMessage('Erro ao salvar perfil', error instanceof Error ? error.message : 'Não foi possível salvar seus dados.');
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      showAppMessage('Não foi possível sair', error.message);
+      return;
+    }
+    setProfileId('');
+    setStoreLaundryId('');
+    setOrders([]);
+    setReviews([]);
+    setAvailableLaundries([]);
+    setSelectedLaundry(null);
+    setName('');
+    setEmail('');
+    setPhone('');
+    setPassword('');
+    setAddress('');
+    setInstructions('');
+    setAccountType('client');
+    setScreen('login');
+  };
+
   // Login com Supabase Auth e recuperação do perfil, se necessário
   const login = async () => {
     const normalizedEmail = email.trim().toLowerCase();
@@ -562,7 +623,7 @@ const updateOrderStep = async (value: string) => {
     // Primeiro tenta localizar o perfil criado pelo gatilho do banco.
     const { data: existingProfile, error: profileReadError } = await supabase
       .from('profiles')
-      .select('id, name, email, phone, account_type')
+      .select('id, name, email, phone, account_type, default_address')
       .eq('id', data.user.id)
       .maybeSingle();
 
@@ -593,7 +654,7 @@ const updateOrderStep = async (value: string) => {
           },
           { onConflict: 'id' },
         )
-        .select('id, name, email, phone, account_type')
+        .select('id, name, email, phone, account_type, default_address')
         .single();
 
       if (insertProfileError || !insertedProfile) {
@@ -611,6 +672,7 @@ const updateOrderStep = async (value: string) => {
     setName(profile.name ?? '');
     setEmail(data.user.email ?? normalizedEmail);
     setPhone(profile.phone ?? '');
+    setAddress(profile.default_address ?? '');
     setAccountType(type);
     await loadWorkspace(data.user.id, type, profile.name ?? '', profile.phone ?? '');
     setPassword('');
@@ -731,34 +793,111 @@ const updateOrderStep = async (value: string) => {
     setScreen('payment');
   };
 
-  // Confirma o pedido
+  // Confirma o pedido. O bloqueio evita pedidos duplicados por toques repetidos.
   const confirmOrder = async () => {
-    if (!profileId || !selectedLaundry) { showAppMessage('Sessão inválida', 'Entre novamente para criar seu pedido.'); return; }
-    const { data: serviceRow, error: serviceError } = await supabase.from('laundry_services').select('id, name, price').eq('laundry_id', selectedLaundry.id).eq('name', service).eq('is_active', true).maybeSingle();
-    if (serviceError || !serviceRow) { showAppMessage('Serviço indisponível', serviceError?.message ?? 'Este serviço não está mais ativo nesta lavanderia. Escolha outro serviço.'); setScreen('laundryDetails'); return; }
-    const servicePrice = Number(serviceRow.price);
-    const deliveryFee = Number(selectedLaundry.deliveryFee ?? 8.9);
-    const orderNumberValue = `LJ-${Date.now().toString().slice(-8)}`;
-    const { data: orderRow, error } = await supabase.from('orders').insert({
-      order_number: orderNumberValue, client_id: profileId, laundry_id: selectedLaundry.id,
-      service_id: serviceRow?.id ?? null, service_name: service, service_price: servicePrice,
-      delivery_fee: deliveryFee, total: servicePrice + deliveryFee, status: 'pending', current_step: 0,
-      scheduled_date: date, scheduled_time: time, address: address.trim(), instructions: instructions.trim(), payment_method: paymentToDbValue(payment),
-    }).select('id').single();
-    if (error || !orderRow) { showAppMessage('Erro ao criar pedido', error?.message ?? 'O pedido não foi retornado pelo banco.'); return; }
-    const { error: paymentError } = await supabase.from('payments').insert({ order_id: orderRow.id, amount: servicePrice + deliveryFee, method: paymentToDbValue(payment), status: 'pending' });
-    if (paymentError) { showAppMessage('Pedido criado, pagamento pendente', `Pedido ${orderNumberValue} criado, mas o pagamento não foi registrado: ${paymentError.message}`); }
-    const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = { id: orderNumberValue, dbId: orderRow.id, laundryId: selectedLaundry.id, service, date: formatDatePtBr(date), value: servicePrice + deliveryFee, currentStep: 0, time, address, instructions, payment };
-    setOrders((previous) => [newOrder, ...previous]);
-    setSelectedOrderId(orderNumberValue);
-    setOrderNumber(orderNumberValue);
-    setScreen('confirmation');
+    if (creatingOrderRef.current) return;
+    if (!profileId || !selectedLaundry) {
+      showAppMessage('Sessão inválida', 'Entre novamente para criar seu pedido.');
+      return;
+    }
+    if (!date || !time || !address.trim()) {
+      showAppMessage('Dados incompletos', 'Confira a data, o horário e o endereço de coleta.');
+      setScreen('schedule');
+      return;
+    }
+
+    creatingOrderRef.current = true;
+    setCreatingOrder(true);
+    try {
+      const { data: serviceRow, error: serviceError } = await supabase
+        .from('laundry_services')
+        .select('id, name, price')
+        .eq('laundry_id', selectedLaundry.id)
+        .eq('name', service)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (serviceError || !serviceRow) {
+        showAppMessage('Serviço indisponível', serviceError?.message ?? 'Este serviço não está mais ativo nesta lavanderia. Escolha outro serviço.');
+        setScreen('laundryDetails');
+        return;
+      }
+
+      const servicePrice = Number(serviceRow.price);
+      const deliveryFee = Number(selectedLaundry.deliveryFee ?? 8.9);
+      const orderTotal = servicePrice + deliveryFee;
+      if (!Number.isFinite(orderTotal) || orderTotal < 0) {
+        showAppMessage('Valor inválido', 'Não foi possível calcular o total deste pedido.');
+        return;
+      }
+
+      const orderNumberValue = `LJ-${Date.now().toString().slice(-8)}`;
+      const { data: orderRow, error } = await supabase.from('orders').insert({
+        order_number: orderNumberValue,
+        client_id: profileId,
+        laundry_id: selectedLaundry.id,
+        service_id: serviceRow.id,
+        service_name: serviceRow.name,
+        service_price: servicePrice,
+        delivery_fee: deliveryFee,
+        total: orderTotal,
+        status: 'pending',
+        current_step: 0,
+        scheduled_date: date,
+        scheduled_time: time,
+        address: address.trim(),
+        instructions: instructions.trim(),
+        payment_method: paymentToDbValue(payment),
+      }).select('id').single();
+
+      if (error || !orderRow) {
+        showAppMessage('Erro ao criar pedido', error?.message ?? 'O pedido não foi retornado pelo banco.');
+        return;
+      }
+
+      const { error: paymentError } = await supabase.from('payments').insert({
+        order_id: orderRow.id,
+        amount: orderTotal,
+        method: paymentToDbValue(payment),
+        status: 'pending',
+      });
+
+      if (paymentError) {
+        showAppMessage(
+          'Pedido criado com pagamento pendente',
+          `O pedido ${orderNumberValue} foi criado, mas o registro financeiro não foi concluído. Entre em contato com a lavanderia antes de realizar qualquer pagamento. Detalhe: ${paymentError.message}`,
+        );
+      }
+
+      const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = {
+        id: orderNumberValue,
+        dbId: orderRow.id,
+        laundryId: selectedLaundry.id,
+        service: serviceRow.name,
+        date: formatDatePtBr(date),
+        value: orderTotal,
+        currentStep: 0,
+        time,
+        address: address.trim(),
+        instructions: instructions.trim(),
+        payment,
+      };
+      setOrders((previous) => [newOrder, ...previous]);
+      setSelectedOrderId(orderNumberValue);
+      setOrderNumber(orderNumberValue);
+      setScreen('confirmation');
+    } catch (error) {
+      showAppMessage('Erro ao confirmar pedido', error instanceof Error ? error.message : 'Ocorreu um erro inesperado. Tente novamente.');
+    } finally {
+      creatingOrderRef.current = false;
+      setCreatingOrder(false);
+    }
   };
 
   // Finaliza o fluxo do pedido
   const resetOrder = () => {
     setService('Lavagem e dobra');
-    setAddress('');
+    // Preserva o endereço padrão salvo no perfil para o próximo pedido.
     setInstructions('');
     setDate(getTodayISODate());
     setTime('14:00');
@@ -848,6 +987,7 @@ const updateOrderStep = async (value: string) => {
           }}
           reviews={reviews}
           onSubmitReview={submitReview}
+          onRefreshOrders={refreshOrders}
           onNewOrder={() => { setSelectedLaundry(null); setSelectedServiceDetails(services[0]); setScreen('home'); }}
         />
       );
@@ -856,14 +996,13 @@ const updateOrderStep = async (value: string) => {
       return (
         <ProfileScreen
           name={name}
-          setName={setName}
           email={email}
-          setEmail={setEmail}
           phone={phone}
-          setPhone={setPhone}
           address={address}
-          setAddress={setAddress}
+          isStore={accountType === 'store'}
           navigate={setScreen}
+          onSave={saveProfile}
+          onLogout={logout}
         />
       );
 
@@ -976,6 +1115,7 @@ const updateOrderStep = async (value: string) => {
           total={total}
           navigate={setScreen}
           confirmOrder={confirmOrder}
+          confirming={creatingOrder}
         />
       );
 

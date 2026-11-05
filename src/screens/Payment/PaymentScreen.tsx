@@ -28,9 +28,10 @@ service: Service;
   total: number;
   navigate: Navigate;
   confirmOrder: () => void;
+  confirming?: boolean;
 };
 
-export default function PaymentScreen({ service, date, time, address, instructions, payment, setPayment, selectedService, total, navigate, confirmOrder }: Props) {
+export default function PaymentScreen({ service, date, time, address, instructions, payment, setPayment, selectedService, total, navigate, confirmOrder, confirming = false }: Props) {
   return (
   <SafeAreaView style={styles.safe}>
     <ExpoStatusBar style="dark" />
@@ -59,7 +60,7 @@ export default function PaymentScreen({ service, date, time, address, instructio
         <View style={styles.cardDivider} />
         <View style={styles.breakdownRow}><Text style={styles.totalLabel}>Total estimado</Text><Text style={styles.totalValue}>{money(total)}</Text></View>
       </View>
-      <PrimaryButton title="Confirmar pedido" onPress={confirmOrder} icon="checkmark-circle-outline" />
+      <PrimaryButton title={confirming ? 'Criando pedido...' : 'Confirmar pedido'} onPress={confirmOrder} icon={confirming ? undefined : 'checkmark-circle-outline'} disabled={confirming} />
       <Text style={styles.smallDisclaimer}>Demonstração: nenhum pagamento real será cobrado nesta versão.</Text>
     </ScrollView>
   </SafeAreaView>
