@@ -35,3 +35,17 @@ As políticas RLS informadas foram consideradas nas operações principais. Não
 - Não compartilhe nem publique seu `.env`.
 - Use somente a chave `anon`/publishable no aplicativo Expo. Nunca coloque a `service_role` no app.
 - Este ZIP exclui `.env`, `node_modules`, `.expo` e metadados Git.
+
+## Melhorias desta versão
+
+- Pedidos da conta de lavanderia são consultados e filtrados pelo `laundry_id` da própria lavanderia.
+- Avaliações são vinculadas à lavanderia (`laundry_id`) e a tela de detalhes mostra somente avaliações daquela lavanderia.
+- Login e restauração de sessão de contas de loja direcionam para a Home; o painel administrativo continua disponível pela Home.
+- Agendamento com calendário para escolher qualquer data a partir de hoje e campo de horário livre no formato 24 horas (`HH:MM`).
+- A data escolhida é gravada em `orders.scheduled_date` no formato `YYYY-MM-DD`, e o horário em `orders.scheduled_time`.
+
+### Executar
+
+1. Configure as variáveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` em `.env`.
+2. Execute `npm ci`.
+3. Execute `npx expo start -c`.

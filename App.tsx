@@ -27,6 +27,7 @@ import LaundryDetailsScreen from './src/screens/LaundryDetails/LaundryDetailsScr
 import ServicesScreen from './src/screens/Services/ServicesScreen';
 
 import type { LaundryOrder } from './src/types/order';
+import { formatDatePtBr, getTodayISODate } from './src/utils/date';
 
 export default function App() {
   // Navegação
@@ -116,7 +117,7 @@ export default function App() {
       setPhone(currentProfile.phone ?? '');
       setAccountType(type);
       await loadWorkspace(session.user.id, type, currentProfile.name ?? '', currentProfile.phone ?? '');
-      setScreen(type === 'store' ? 'admin' : 'home');
+      setScreen('home');
     };
     void restoreSession();
     return () => { mounted = false; };
@@ -128,8 +129,8 @@ export default function App() {
   // Dados do pedido
   const [address, setAddress] = useState('');
   const [service, setService] = useState<Service>('Lavagem e dobra');
-  const [date, setDate] = useState('Hoje, 04 nov.');
-  const [time, setTime] = useState('14h–16h');
+  const [date, setDate] = useState(getTodayISODate());
+  const [time, setTime] = useState('14:00');
 
   const [payment, setPayment] = useState<PaymentMethod>('Pix');
   const [instructions, setInstructions] = useState('');
@@ -154,13 +155,13 @@ export default function App() {
     try {
       const { data, error } = await supabase
         .from('orders')
-        .select('id, total, status, created_at')
+        .select('id, laundry_id, total, status, created_at')
         .eq('laundry_id', laundryId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const rows = data ?? [];
+      const rows = (data ?? []).filter((order) => order.laundry_id === laundryId);
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -226,12 +227,19 @@ export default function App() {
 
   const loadWorkspace = async (userId: string, type: AccountType, displayName: string, userPhone: string) => {
     setProfileId(userId);
+    // Limpa dados da sessão anterior antes de carregar os dados da conta atual.
+    setOrders([]);
+    setReviews([]);
+    setAvailableLaundries([]);
+    setStoreLaundryId('');
+
     try {
       if (type === 'store') {
         const laundry = await ensureStoreLaundry(userId, displayName, userPhone);
         setStoreLaundryId(laundry.id);
         const rows = await getRelatedOrders(userId, true, laundry.id);
-        setOrders(rows.map((row) => mapDbOrder(row as Parameters<typeof mapDbOrder>[0])));
+        const storeRows = rows.filter((row) => row.laundry_id === laundry.id);
+        setOrders(storeRows.map((row) => mapDbOrder(row as Parameters<typeof mapDbOrder>[0])));
         await loadStoreDashboard(laundry.id);
         setSelectedLaundry({ id: laundry.id, name: laundry.name, rating: '0,0', distance: '', deliveryFee: Number(laundry.delivery_fee), address: laundry.address, description: laundry.description });
       } else {
@@ -257,12 +265,11 @@ export default function App() {
         );
         setOrders(mappedOrders);
 
-        // Recupera as avaliações já salvas para que continuem aparecendo
-        // mesmo depois de sair da conta ou fechar o aplicativo.
+        // Carrega avaliações públicas de todas as lavanderias. A tela de
+        // detalhes filtra por laundryId, enquanto Meus pedidos usa orderId.
         const { data: reviewRows, error: reviewsError } = await supabase
           .from('reviews')
-          .select('order_id, rating, comment, created_at')
-          .eq('client_id', userId)
+          .select('order_id, laundry_id, rating, comment, created_at')
           .order('created_at', { ascending: false });
 
         if (reviewsError) throw reviewsError;
@@ -274,18 +281,16 @@ export default function App() {
         });
 
         setReviews(
-          (reviewRows ?? [])
-            .map((review) => {
-              const displayedOrderId = orderIdByDatabaseId.get(review.order_id);
-              if (!displayedOrderId) return null;
-              return {
-                orderId: displayedOrderId,
-                rating: Number(review.rating),
-                comment: review.comment ?? '',
-                createdAt: new Date(review.created_at).toLocaleDateString('pt-BR'),
-              };
-            })
-            .filter((review): review is Review => review !== null),
+          (reviewRows ?? []).map((review) => ({
+            // Para pedidos do próprio cliente, usa o número amigável LJ-...;
+            // para avaliações de outros clientes, o UUID não coincide com
+            // nenhum pedido da tela Meus pedidos e não interfere nela.
+            orderId: orderIdByDatabaseId.get(review.order_id) ?? review.order_id,
+            laundryId: review.laundry_id,
+            rating: Number(review.rating),
+            comment: review.comment ?? '',
+            createdAt: review.created_at,
+          })),
         );
       }
     } catch (error) {
@@ -387,9 +392,10 @@ export default function App() {
         ...previous.filter((review) => review.orderId !== orderId),
         {
           orderId,
+          laundryId: dbOrder.laundry_id,
           rating: Number(savedReview.rating),
           comment: savedReview.comment ?? '',
-          createdAt: new Date(savedReview.created_at).toLocaleDateString('pt-BR'),
+          createdAt: savedReview.created_at,
         },
       ]);
 
@@ -467,6 +473,7 @@ const updateOrderStep = async (value: string) => {
         updated_at: new Date().toISOString(),
       })
       .eq('id', dbId)
+      .eq('laundry_id', storeLaundryId)
       .select('id, current_step, status')
       .maybeSingle();
 
@@ -606,7 +613,7 @@ const updateOrderStep = async (value: string) => {
     setAccountType(type);
     await loadWorkspace(data.user.id, type, profile.name ?? '', profile.phone ?? '');
     setPassword('');
-    setScreen(type === 'store' ? 'admin' : 'home');
+    setScreen('home');
   };
 
   // Cadastro no Supabase Auth. O trigger SQL cria o registro em profiles.
@@ -735,12 +742,12 @@ const updateOrderStep = async (value: string) => {
       order_number: orderNumberValue, client_id: profileId, laundry_id: selectedLaundry.id,
       service_id: serviceRow?.id ?? null, service_name: service, service_price: servicePrice,
       delivery_fee: deliveryFee, total: servicePrice + deliveryFee, status: 'pending', current_step: 0,
-      scheduled_date: null, scheduled_time: time, address: address.trim(), instructions: instructions.trim(), payment_method: payment,
+      scheduled_date: date, scheduled_time: time, address: address.trim(), instructions: instructions.trim(), payment_method: payment,
     }).select('id').single();
     if (error || !orderRow) { showAppMessage('Erro ao criar pedido', error?.message ?? 'O pedido não foi retornado pelo banco.'); return; }
     const { error: paymentError } = await supabase.from('payments').insert({ order_id: orderRow.id, amount: servicePrice + deliveryFee, method: payment, status: 'pending' });
     if (paymentError) { showAppMessage('Pedido criado, pagamento pendente', `Pedido ${orderNumberValue} criado, mas o pagamento não foi registrado: ${paymentError.message}`); }
-    const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = { id: orderNumberValue, dbId: orderRow.id, laundryId: selectedLaundry.id, service, date, value: servicePrice + deliveryFee, currentStep: 0, time, address, instructions, payment };
+    const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = { id: orderNumberValue, dbId: orderRow.id, laundryId: selectedLaundry.id, service, date: formatDatePtBr(date), value: servicePrice + deliveryFee, currentStep: 0, time, address, instructions, payment };
     setOrders((previous) => [newOrder, ...previous]);
     setSelectedOrderId(orderNumberValue);
     setOrderNumber(orderNumberValue);
@@ -752,8 +759,8 @@ const updateOrderStep = async (value: string) => {
     setService('Lavagem e dobra');
     setAddress('');
     setInstructions('');
-    setDate('Hoje, 04 nov.');
-    setTime('14h–16h');
+    setDate(getTodayISODate());
+    setTime('14:00');
     setPayment('Pix');
 
     // Mantém a lavanderia escolhida e os dados da sessão

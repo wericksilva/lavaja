@@ -13,6 +13,7 @@ import Brand from '../../components/Brand';
 import PrimaryButton from '../../components/PrimaryButton';
 import type { ServiceItem } from '../../data/services';
 import { money } from '../../utils/money';
+import { formatDatePtBr } from '../../utils/date';
 import type { Navigate, Service, PaymentMethod } from '../../types';
 
 type Props = {
@@ -39,7 +40,7 @@ export default function PaymentScreen({ service, date, time, address, instructio
       <Text style={styles.pageHeadline}>Quase tudo pronto!</Text>
       <Text style={styles.pageSub}>Confira os detalhes e escolha como pagar.</Text>
       <View style={styles.orderCard}>
-        <View style={styles.orderCardTop}><View style={styles.orderIcon}><Ionicons name="shirt-outline" size={23} color={C.blue} /></View><View style={{ flex: 1 }}><Text style={styles.orderTitle}>{service}</Text><Text style={styles.orderSub}>Coleta: {date} · {time}</Text></View><TouchableOpacity onPress={() => navigate('schedule')}><Text style={styles.linkText}>Editar</Text></TouchableOpacity></View>
+        <View style={styles.orderCardTop}><View style={styles.orderIcon}><Ionicons name="shirt-outline" size={23} color={C.blue} /></View><View style={{ flex: 1 }}><Text style={styles.orderTitle}>{service}</Text><Text style={styles.orderSub}>Coleta: {formatDatePtBr(date)} · {time}</Text></View><TouchableOpacity onPress={() => navigate('schedule')}><Text style={styles.linkText}>Editar</Text></TouchableOpacity></View>
         <View style={styles.cardDivider} />
         <View style={styles.addressLine}><Ionicons name="location-outline" size={18} color={C.muted} /><Text style={styles.addressText}>{address}</Text></View>
         {instructions ? <Text style={styles.instructionText}>Instruções: {instructions}</Text> : null}

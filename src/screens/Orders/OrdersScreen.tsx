@@ -21,6 +21,7 @@ import type { LaundryOrder } from '../../types/order';
 
 export type Review = {
   orderId: string;
+  laundryId?: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -36,7 +37,7 @@ type Props = {
     orderId: string,
     rating: number,
     comment: string,
-  ) => void;
+  ) => Promise<boolean>;
   onNewOrder: () => void;
 };
 
@@ -68,32 +69,28 @@ export default function OrdersScreen({
   };
 
   const submitCurrentReview = async () => {
-  if (!reviewOrderId || submittingReview) return;
+    if (!reviewOrderId || submittingReview) return;
 
-  if (reviewRating === 0) {
-    Alert.alert(
-      'Avaliação necessária',
-      'Escolha uma nota de 1 a 5 estrelas.',
-    );
-    return;
-  }
-
-  try {
-    setSubmittingReview(true);
-
-    const saved = await onSubmitReview(
-      reviewOrderId,
-      reviewRating,
-      reviewComment.trim(),
-    );
-
-    if (saved) {
-      closeReview();
+    if (reviewRating === 0) {
+      Alert.alert(
+        'Avaliação necessária',
+        'Escolha uma nota de 1 a 5 estrelas.',
+      );
+      return;
     }
-  } finally {
-    setSubmittingReview(false);
-  }
-};
+
+    try {
+      setSubmittingReview(true);
+      const saved = await onSubmitReview(
+        reviewOrderId,
+        reviewRating,
+        reviewComment.trim(),
+      );
+      if (saved) closeReview();
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   const toggleDetails = (id: string) => {
     setExpandedOrders((current) =>
@@ -432,18 +429,15 @@ export default function OrdersScreen({
             />
 
             <TouchableOpacity
-  style={[
-    styles.submitReview,
-    submittingReview && { opacity: 0.6 },
-  ]}
-  onPress={submitCurrentReview}
-  disabled={submittingReview}
-  activeOpacity={0.8}
->
-  <Text style={styles.submitReviewText}>
-    {submittingReview ? 'Salvando avaliação...' : 'Enviar avaliação'}
-  </Text>
-</TouchableOpacity>
+              style={[styles.submitReview, submittingReview && { opacity: 0.6 }]}
+              onPress={submitCurrentReview}
+              disabled={submittingReview}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.submitReviewText}>
+                {submittingReview ? 'Salvando avaliação...' : 'Enviar avaliação'}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               style={styles.cancelReview}

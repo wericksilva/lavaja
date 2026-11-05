@@ -51,10 +51,15 @@ export default function LaundryDetailsScreen({
 
 
 
+  // Cada tela de detalhes mostra exclusivamente as avaliações desta lavanderia.
+  const laundryReviews = reviews.filter(
+    (review) => review.laundryId === laundry.id,
+  );
+
   const averageRating =
-    reviews.length > 0
-      ? reviews.reduce((sum, review) => sum + review.rating, 0) /
-        reviews.length
+    laundryReviews.length > 0
+      ? laundryReviews.reduce((sum, review) => sum + review.rating, 0) /
+        laundryReviews.length
       : 0;
 
   return (
@@ -129,7 +134,7 @@ export default function LaundryDetailsScreen({
                 />
 
                 <Text style={styles.ratingText}>
-                  {reviews.length > 0
+                  {laundryReviews.length > 0
                     ? averageRating.toFixed(1)
                     : laundry.rating}
                 </Text>
@@ -309,7 +314,7 @@ export default function LaundryDetailsScreen({
 
               <View style={styles.reviewsSummary}>
                 <Text style={styles.reviewsAverage}>
-                  {reviews.length > 0
+                  {laundryReviews.length > 0
                     ? averageRating.toFixed(1)
                     : '—'}
                 </Text>
@@ -331,8 +336,8 @@ export default function LaundryDetailsScreen({
                   </View>
 
                   <Text style={styles.reviewsCount}>
-                    {reviews.length}{' '}
-                    {reviews.length === 1
+                    {laundryReviews.length}{' '}
+                    {laundryReviews.length === 1
                       ? 'avaliação'
                       : 'avaliações'}
                   </Text>
@@ -343,7 +348,7 @@ export default function LaundryDetailsScreen({
                 style={styles.reviewsList}
                 showsVerticalScrollIndicator={false}
               >
-                {reviews.length === 0 ? (
+                {laundryReviews.length === 0 ? (
                   <View style={styles.reviewsEmpty}>
                     <Ionicons
                       name="chatbubble-ellipses-outline"
@@ -361,7 +366,7 @@ export default function LaundryDetailsScreen({
                     </Text>
                   </View>
                 ) : (
-                  [...reviews]
+                  [...laundryReviews]
                     .sort(
                       (a, b) =>
                         new Date(b.createdAt).getTime() -

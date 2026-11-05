@@ -5,6 +5,17 @@ export type DbLaundry = {
   image_url: string | null; delivery_fee: number; estimated_delivery: string; is_active: boolean;
 };
 
+export type DbLaundryService = {
+  id: string;
+  laundry_id: string;
+  name: string;
+  description: string | null;
+  price: number | string;
+  estimated_duration: string | null;
+  is_active: boolean;
+  created_at?: string;
+};
+
 export async function ensureStoreLaundry(ownerId: string, name: string, phone = '') {
   const { data: existing, error: readError } = await supabase
     .from('laundries').select('*').eq('owner_id', ownerId).maybeSingle();
@@ -24,18 +35,40 @@ export async function getActiveLaundries() {
   return (data ?? []) as DbLaundry[];
 }
 
-export async function getLaundryServices(laundryId: string) {
-  const { data, error } = await supabase.from('laundry_services').select('*').eq('laundry_id', laundryId).order('created_at');
+export async function getLaundryServices(laundryId: string, activeOnly = false): Promise<DbLaundryService[]> {
+  let query = supabase
+    .from('laundry_services')
+    .select('id, laundry_id, name, description, price, estimated_duration, is_active, created_at')
+    .eq('laundry_id', laundryId);
+
+  if (activeOnly) query = query.eq('is_active', true);
+
+  const { data, error } = await query.order('created_at', { ascending: true });
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as DbLaundryService[];
 }
 
 export async function getRelatedOrders(userId: string, isStore: boolean, laundryId?: string) {
-  let query = supabase.from('orders').select('*, laundries(name), payments(status, method)');
-  query = isStore && laundryId ? query.eq('laundry_id', laundryId) : query.eq('client_id', userId);
+  let query = supabase
+    .from('orders')
+    .select('*, laundries(name), payments(status, method)');
+
+  if (isStore) {
+    if (!laundryId) {
+      throw new Error('Não foi possível identificar a lavanderia desta conta.');
+    }
+    query = query.eq('laundry_id', laundryId);
+  } else {
+    query = query.eq('client_id', userId);
+  }
+
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw error;
-  return data ?? [];
+
+  // Segunda validação no cliente para impedir que registros de outra
+  // lavanderia apareçam mesmo se uma consulta/RLS estiver configurada errado.
+  const rows = data ?? [];
+  return isStore ? rows.filter((row) => row.laundry_id === laundryId) : rows;
 }
 
 type DbOrderRow = { id: string; order_number: string | null; service_name: string; scheduled_date: string | null; created_at: string; total: number | string; current_step: number | null; scheduled_time: string | null; address: string; instructions: string; payment_method: string; laundry_id: string; laundries?: { name?: string } | null };
