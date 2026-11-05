@@ -1,4 +1,5 @@
-import React from 'react';
+
+import React, { useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -6,6 +7,7 @@ import {
   Text,
   TouchableOpacity,
   View,
+  Modal,
 } from 'react-native';
 
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -15,22 +17,33 @@ import type { Laundry } from '../../data/laundries';
 import { services } from '../../data/services';
 import { money } from '../../utils/money';
 import type { Navigate, Service } from '../../types';
+import type { Review } from '../Orders/OrdersScreen';
 
 type Props = {
   laundry: Laundry;
   setService: (value: Service) => void;
   navigate: Navigate;
+  reviews: Review[];
 };
 
 export default function LaundryDetailsScreen({
   laundry,
   setService,
   navigate,
+  reviews,
 }: Props) {
+  const [reviewsVisible, setReviewsVisible] = useState(false);
+
   const handleSelectService = (serviceName: Service) => {
     setService(serviceName);
     navigate('schedule');
   };
+
+  const averageRating =
+    reviews.length > 0
+      ? reviews.reduce((sum, review) => sum + review.rating, 0) /
+        reviews.length
+      : 0;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -92,7 +105,11 @@ export default function LaundryDetailsScreen({
             </Text>
 
             <View style={styles.ratingRow}>
-              <View style={styles.ratingItem}>
+              <TouchableOpacity
+                style={styles.ratingItem}
+                onPress={() => setReviewsVisible(true)}
+                activeOpacity={0.7}
+              >
                 <Ionicons
                   name="star"
                   size={17}
@@ -100,13 +117,21 @@ export default function LaundryDetailsScreen({
                 />
 
                 <Text style={styles.ratingText}>
-                  {laundry.rating}
+                  {reviews.length > 0
+                    ? averageRating.toFixed(1)
+                    : laundry.rating}
                 </Text>
 
                 <Text style={styles.ratingCaption}>
                   Avaliação
                 </Text>
-              </View>
+
+                <Ionicons
+                  name="chevron-forward"
+                  size={14}
+                  color="#8A989F"
+                />
+              </TouchableOpacity>
 
               <View style={styles.verticalDivider} />
 
@@ -139,10 +164,7 @@ export default function LaundryDetailsScreen({
             </View>
 
             <View style={styles.infoContent}>
-              <Text style={styles.infoTitle}>
-                Localização
-              </Text>
-
+              <Text style={styles.infoTitle}>Localização</Text>
               <Text style={styles.infoDescription}>
                 {laundry.address}
               </Text>
@@ -233,6 +255,144 @@ export default function LaundryDetailsScreen({
             </Text>
           </View>
         </ScrollView>
+
+        {/* Modal de avaliações */}
+        <Modal
+          visible={reviewsVisible}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setReviewsVisible(false)}
+        >
+          <View style={styles.reviewsOverlay}>
+            <View style={styles.reviewsModal}>
+              <View style={styles.reviewsHeader}>
+                <View>
+                  <Text style={styles.reviewsTitle}>
+                    Avaliações
+                  </Text>
+
+                  <Text style={styles.reviewsSubtitle}>
+                    {laundry.name}
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={() => setReviewsVisible(false)}
+                  style={styles.reviewsClose}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="close"
+                    size={24}
+                    color="#18323E"
+                  />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.reviewsSummary}>
+                <Text style={styles.reviewsAverage}>
+                  {reviews.length > 0
+                    ? averageRating.toFixed(1)
+                    : '—'}
+                </Text>
+
+                <View>
+                  <View style={styles.reviewsStars}>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Ionicons
+                        key={star}
+                        name={
+                          star <= Math.round(averageRating)
+                            ? 'star'
+                            : 'star-outline'
+                        }
+                        size={17}
+                        color="#F2B544"
+                      />
+                    ))}
+                  </View>
+
+                  <Text style={styles.reviewsCount}>
+                    {reviews.length}{' '}
+                    {reviews.length === 1
+                      ? 'avaliação'
+                      : 'avaliações'}
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                style={styles.reviewsList}
+                showsVerticalScrollIndicator={false}
+              >
+                {reviews.length === 0 ? (
+                  <View style={styles.reviewsEmpty}>
+                    <Ionicons
+                      name="chatbubble-ellipses-outline"
+                      size={38}
+                      color="#8A989F"
+                    />
+
+                    <Text style={styles.reviewsEmptyTitle}>
+                      Ainda não há avaliações
+                    </Text>
+
+                    <Text style={styles.reviewsEmptyText}>
+                      Quando os clientes avaliarem seus pedidos,
+                      as opiniões aparecerão aqui.
+                    </Text>
+                  </View>
+                ) : (
+                  [...reviews]
+                    .sort(
+                      (a, b) =>
+                        new Date(b.createdAt).getTime() -
+                        new Date(a.createdAt).getTime(),
+                    )
+                    .map((review, index) => (
+                      <View
+                        key={`${review.orderId}-${index}`}
+                        style={styles.reviewCard}
+                      >
+                        <View style={styles.reviewCardHeader}>
+                          <View style={styles.reviewsStars}>
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Ionicons
+                                key={star}
+                                name={
+                                  star <= review.rating
+                                    ? 'star'
+                                    : 'star-outline'
+                                }
+                                size={15}
+                                color="#F2B544"
+                              />
+                            ))}
+                          </View>
+
+                          <Text style={styles.reviewDate}>
+                            {new Date(
+                              review.createdAt,
+                            ).toLocaleDateString('pt-BR')}
+                          </Text>
+                        </View>
+
+                        {review.comment.trim() ? (
+                          <Text style={styles.reviewComment}>
+                            {review.comment}
+                          </Text>
+                        ) : (
+                          <Text style={styles.reviewNoComment}>
+                            Avaliação sem comentário.
+                          </Text>
+                        )}
+                      </View>
+                    ))
+                )}
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
 
         {/* Rodapé */}
         <View style={styles.footer}>
@@ -512,5 +672,117 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '800',
+  },
+  reviewsOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'flex-end',
+  },
+  reviewsModal: {
+    backgroundColor: '#F5F8FA',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingTop: 22,
+    paddingHorizontal: 20,
+    paddingBottom: 25,
+    maxHeight: '85%',
+  },
+  reviewsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 18,
+  },
+  reviewsTitle: {
+    color: '#18323E',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  reviewsSubtitle: {
+    color: '#7B8A92',
+    fontSize: 12,
+    marginTop: 4,
+  },
+  reviewsClose: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reviewsSummary: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 15,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 17,
+    marginBottom: 15,
+  },
+  reviewsAverage: {
+    color: '#18323E',
+    fontSize: 35,
+    fontWeight: '900',
+  },
+  reviewsStars: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  reviewsCount: {
+    color: '#7B8A92',
+    fontSize: 11,
+    marginTop: 5,
+  },
+  reviewsList: {
+    flexGrow: 0,
+  },
+  reviewsEmpty: {
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 25,
+  },
+  reviewsEmptyTitle: {
+    color: '#18323E',
+    fontSize: 14,
+    fontWeight: '800',
+    marginTop: 12,
+  },
+  reviewsEmptyText: {
+    color: '#7B8A92',
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    marginTop: 7,
+  },
+  reviewCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 10,
+  },
+  reviewCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  reviewDate: {
+    color: '#8A989F',
+    fontSize: 10,
+  },
+  reviewComment: {
+    color: '#42616E',
+    fontSize: 13,
+    lineHeight: 19,
+    marginTop: 11,
+  },
+  reviewNoComment: {
+    color: '#8A989F',
+    fontSize: 12,
+    fontStyle: 'italic',
+    marginTop: 11,
   },
 });

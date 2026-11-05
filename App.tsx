@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -31,7 +30,7 @@ export default function App() {
   // Navegação
   const [screen, setScreen] = useState<Screen>('login');
 
-  // Avaliações
+  // Avaliações dos pedidos
   const [reviews, setReviews] = useState<Review[]>([]);
 
   // Dados do usuário
@@ -422,6 +421,7 @@ export default function App() {
           laundry={selectedLaundry}
           setService={setService}
           navigate={setScreen}
+          reviews={reviews}
         />
       );
 
