@@ -1,27 +1,30 @@
-# Checklist de testes manuais — LavaJá
+# Checklist de teste — LavaJá
 
-Use duas contas de cliente e duas contas de lavanderia diferentes para validar o isolamento dos dados.
+## Notificações
+- [ ] Aplicar a migration no Supabase.
+- [ ] Entrar como cliente e como loja e conferir o sino na tela inicial.
+- [ ] Criar pedido: a loja deve receber notificação na central.
+- [ ] Alterar a etapa do pedido: o outro participante deve receber notificação.
+- [ ] Abrir a central e tocar na notificação: o pedido correto deve abrir.
+- [ ] Em build nativo com EAS/FCM/APNs configurados, conferir também o push do sistema.
 
-## Cliente
-- [ ] Entrar e conferir se nome, telefone e endereço padrão aparecem no perfil.
-- [ ] Alterar nome, telefone e endereço; sair e entrar novamente para confirmar persistência.
-- [ ] Criar pedido com Pix.
-- [ ] Criar pedido com Cartão de crédito.
-- [ ] Criar pedido com Pagar na entrega.
-- [ ] Tocar rapidamente duas vezes em Confirmar pedido e verificar que apenas um pedido foi criado.
-- [ ] Tentar agendar para um horário que já passou hoje e confirmar que o app bloqueia.
-- [ ] Atualizar a tela Meus pedidos e conferir se os dados continuam corretos.
-- [ ] Avaliar um pedido somente depois de entregue.
-- [ ] Sair da conta e confirmar que volta ao login.
+## Cancelamento
+- [ ] Cliente cancela pedido nas etapas 0 e 1.
+- [ ] Cliente não consegue cancelar a partir da etapa 2.
+- [ ] Loja consegue cancelar até etapa 2.
+- [ ] Loja não consegue cancelar a partir da etapa 3.
+- [ ] Pedido entregue ou cancelado não pode ser cancelado novamente.
 
-## Lavanderia
-- [ ] Entrar com a conta da Lavanderia A e conferir somente os pedidos dela.
-- [ ] Atualizar os pedidos sem sair da tela.
-- [ ] Alterar o status de um pedido e conferir o novo estágio.
-- [ ] Entrar com a conta da Lavanderia B e confirmar que não aparecem pedidos nem avaliações da Lavanderia A.
-- [ ] Sair e confirmar que a sessão é encerrada.
+## Chat
+- [ ] Abrir chat pelo pedido no usuário cliente.
+- [ ] Abrir o mesmo pedido na loja e responder.
+- [ ] Conferir atualização em tempo real nos dois lados.
+- [ ] Confirmar que usuário sem relação com o pedido não consegue ler/enviar mensagens (RLS).
 
-## Observações
-- Esta versão não processa pagamentos reais.
-- Teste em ambiente de desenvolvimento antes de publicar.
-- Não compartilhe o arquivo `.env` nem a chave `service_role`.
+## Relatórios
+- [ ] Entrar como loja e abrir Área administrativa > Relatórios.
+- [ ] Conferir totais, entregues, em andamento, cancelados, faturamento bruto e ticket médio.
+- [ ] Conferir ranking dos serviços.
+
+## Pagamentos
+- [ ] Nenhum checkout online Pix/cartão ou integração Mercado Pago faz parte desta versão.

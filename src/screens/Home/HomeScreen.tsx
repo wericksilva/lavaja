@@ -45,6 +45,7 @@ type Props = {
   dashboardData?: DashboardData;
   dashboardLoading?: boolean;
   onRefreshDashboard?: () => void;
+  unreadNotifications?: number;
 };
 
 export default function HomeScreen({
@@ -58,6 +59,7 @@ export default function HomeScreen({
   dashboardData = EMPTY_DASHBOARD,
   dashboardLoading = false,
   onRefreshDashboard = () => {},
+  unreadNotifications = 0,
 }: Props) {
   const firstName = name.trim().split(' ')[0] || 'Cliente';
   const [showDashboard, setShowDashboard] = useState(false);
@@ -155,17 +157,29 @@ export default function HomeScreen({
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => navigate('profile')}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="person-outline"
-                size={23}
-                color="#176B87"
-              />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => navigate('notifications')}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir notificações"
+              >
+                <Ionicons name="notifications-outline" size={23} color="#176B87" />
+                {unreadNotifications > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => navigate('profile')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-outline" size={23} color="#176B87" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {isStore ? (
@@ -879,6 +893,10 @@ const styles = StyleSheet.create({
     color: '#75858E',
     marginTop: 4,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  notificationButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#E5F2F5', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  notificationBadge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#F5F8FA' },
+  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900' },
   profileButton: {
     width: 46,
     height: 46,

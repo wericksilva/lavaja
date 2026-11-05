@@ -38,7 +38,7 @@ export default function ConfirmationScreen({ orderNumber, date, time, address, p
     <View style={styles.confirmDetails}>
       <View style={styles.confirmRow}><Ionicons name="calendar-outline" size={20} color={C.blue} /><View style={{ flex: 1 }}><Text style={styles.confirmDetailLabel}>Coleta</Text><Text style={styles.confirmDetailValue}>{formatDatePtBr(date)} · {time}</Text></View></View>
       <View style={styles.confirmRow}><Ionicons name="location-outline" size={20} color={C.blue} /><View style={{ flex: 1 }}><Text style={styles.confirmDetailLabel}>Endereço</Text><Text style={styles.confirmDetailValue}>{address}</Text></View></View>
-      <View style={styles.confirmRow}><Ionicons name="card-outline" size={20} color={C.blue} /><View style={{ flex: 1 }}><Text style={styles.confirmDetailLabel}>Pagamento</Text><Text style={styles.confirmDetailValue}>{payment} · {money(total)}</Text></View></View>
+      <View style={styles.confirmRow}><Ionicons name="card-outline" size={20} color={C.blue} /><View style={{ flex: 1 }}><Text style={styles.confirmDetailLabel}>Forma de pagamento informada</Text><Text style={styles.confirmDetailValue}>{payment} · {money(total)}</Text></View></View>
     </View>
     <View style={styles.statusNotice}><Ionicons name="notifications-outline" size={21} color={C.green} /><Text style={styles.statusNoticeText}>Este é um pedido de demonstração. Rastreamento e notificações serão conectados ao backend.</Text></View>
     <PrimaryButton title="Voltar para o início" onPress={resetOrder} icon="home-outline" />

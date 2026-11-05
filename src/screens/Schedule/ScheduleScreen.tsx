@@ -613,7 +613,7 @@ export default function ScheduleScreen({
 
         {/* CONTINUAR */}
         <PrimaryButton
-          title="Continuar para pagamento"
+          title="Revisar pedido"
           onPress={continuar}
           icon="arrow-forward"
         />

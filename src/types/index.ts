@@ -15,7 +15,10 @@ export type Screen =
   | 'forgotPassword'
   | 'helpSupport'
   | 'laundryDetails'
-  | 'services';
+  | 'services'
+  | 'chat'
+  | 'reports'
+  | 'notifications';
 
 export type Service = string;
 

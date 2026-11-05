@@ -1,76 +1,71 @@
-# LavaJá — Expo + Supabase
+# LavaJá — notificações, cancelamento, chat e relatórios
 
-Projeto baseado nas telas originais do LavaJá. O ZIP não contém credenciais.
+Esta versão deixa a integração de pagamentos online para depois. Ela implementa notificações push e uma central de notificações dentro do app, cancelamento de pedidos com regras por etapa, chat por pedido e relatórios para lavanderias.
 
-## Configuração
+## 1. Instalação
 
 1. Extraia o ZIP.
-2. Crie um arquivo `.env` na raiz, usando `.env.example` como modelo.
-3. Preencha `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` com os valores do seu projeto Supabase.
-4. Execute:
+2. Copie seu arquivo `.env` atual para a raiz (não publique esse arquivo).
+3. Execute `npm install`.
+4. Execute `npx expo start -c`.
 
-   ```bash
-   npm install
-   npx expo start -c
-   ```
+As opções de forma de pagamento que já existiam podem continuar aparecendo no pedido como preferência informada pelo cliente; esta versão não cria checkout Pix/cartão nem processa cobranças online.
 
-## Integrações incluídas nesta versão
+## 2. Atualizar o Supabase
 
-- Login, cadastro, restauração de sessão e recuperação de senha pelo Supabase Auth.
-- Recuperação/criação e edição do perfil em `profiles`, incluindo nome, telefone e endereço padrão.
-- Criação automática de um registro inicial em `laundries` para uma conta do tipo loja.
-- Consulta de lavanderias ativas para a tela inicial.
-- Criação de pedido em `orders` e tentativa de criação de pagamento pendente em `payments`.
-- Atualização da etapa do pedido em `orders` pelo painel da loja.
-- Gravação de avaliações em `reviews` após a entrega.
+No Supabase, abra **SQL Editor > New query** e execute o arquivo:
 
-## Importante — escopo e validação
+`supabase/migrations/20261106_notifications_chat_cancel.sql`
 
-Esta é uma etapa de evolução do projeto, não uma declaração de que todos os fluxos foram validados em produção. O pagamento nesta versão registra o método escolhido e o status pendente; não há cobrança real por Pix ou cartão. O cadastro/edição/exclusão de serviços continua dependendo das políticas RLS correspondentes no Supabase.
+A migration cria `order_messages`, `expo_push_tokens` e `app_notifications`, configura RLS, habilita Realtime para mensagens/notificações, cria a RPC `cancel_order` e a RPC `register_expo_push_token`. Ela não remove nem altera os registros existentes de pedidos ou pagamentos.
 
-As políticas RLS informadas foram consideradas nas operações principais. Não desative RLS para fazer o app funcionar. A política de inserção de avaliações contém a condição redundante `o.laundry_id = o.laundry_id`; revise-a no Supabase antes de usar avaliações em produção.
+## 3. Publicar a Edge Function de push
 
-## Segurança
+```bash
+npx supabase login
+npx supabase link --project-ref SEU_PROJECT_REF
+npx supabase functions deploy notify-order-status
+```
 
-- Não compartilhe nem publique seu `.env`.
-- Use somente a chave `anon`/publishable no aplicativo Expo. Nunca coloque a `service_role` no app.
-- Este ZIP exclui `.env`, `node_modules`, `.expo` e metadados Git.
+A função usa as variáveis gerenciadas pelo Supabase. Não coloque a `service_role` no aplicativo.
 
-## Melhorias desta versão
+## 4. Configurar push nativo
 
-- Pedidos da conta de lavanderia são consultados e filtrados pelo `laundry_id` da própria lavanderia.
-- Avaliações são vinculadas à lavanderia (`laundry_id`) e a tela de detalhes mostra somente avaliações daquela lavanderia.
-- Login e restauração de sessão de contas de loja direcionam para a Home; o painel administrativo continua disponível pela Home.
-- Agendamento com calendário para escolher qualquer data a partir de hoje e campo de horário livre no formato 24 horas (`HH:MM`).
-- A data escolhida é gravada em `orders.scheduled_date` no formato `YYYY-MM-DD`, e o horário em `orders.scheduled_time`.
+Push remoto exige projeto EAS, credenciais FCM/APNs e build nativo em aparelho físico.
 
-### Executar
+```bash
+npx eas-cli login
+npx eas-cli init
+```
 
-1. Configure as variáveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` em `.env`.
-2. Execute `npm ci`.
-3. Execute `npx expo start -c`.
+Confirme que `app.json` contém `expo.extra.eas.projectId` preenchido pelo EAS. Depois configure as credenciais de notificação no EAS e gere um build, por exemplo:
 
+```bash
+npx eas-cli build --profile preview --platform android
+```
 
-## Correção dos métodos de pagamento
+Instale o build no celular e permita notificações. No navegador, a central de notificações do app funciona, mas push nativo não é suportado.
 
-Foi corrigido o envio dos métodos para o Supabase: a interface continua mostrando **Pix**, **Cartão de crédito** e **Pagar na entrega**, mas o aplicativo grava os códigos estáveis `pix`, `credit_card` e `cash`. Isso evita incompatibilidade com os nomes exibidos na tela.
+## 5. O que foi implementado
 
-Se o banco já tiver uma restrição `CHECK` nas colunas `payments.method` ou `orders.payment_method`, execute uma única vez o SQL em `supabase/migrations/20261105_fix_payment_method_check.sql` no SQL Editor do Supabase. A migration remove apenas as restrições `CHECK` dessas colunas; não apaga tabelas nem registros.
+- Sino na tela inicial de cliente e loja, com contador de não lidas.
+- Central de notificações; tocar em uma notificação abre o pedido correspondente.
+- Push ao criar pedido e ao mudar status, enviado ao outro participante.
+- Chat privado por pedido com atualização em tempo real.
+- Cancelamento validado no banco: cliente pode cancelar até antes da coleta; lavanderia até antes do início da lavagem; pedidos entregues não podem ser cancelados.
+- Relatórios da loja: pedidos, andamento, entregues, cancelados, faturamento bruto dos pedidos entregues, ticket médio e serviços mais solicitados.
 
-- O perfil agora salva nome, telefone e endereço padrão diretamente em `profiles`; o e-mail de acesso é exibido como somente leitura para evitar divergência com o Supabase Auth.
-- O botão Sair encerra a sessão real no Supabase Auth e limpa os dados locais da conta.
-- O endereço padrão é recuperado ao entrar e preservado para o próximo agendamento.
-- A tela Meus pedidos permite atualizar a lista sem sair da tela e exibe o estágio atual de cada pedido.
-- O botão de confirmar pedido é bloqueado enquanto a gravação está em andamento, reduzindo pedidos duplicados por toques repetidos.
-- O agendamento impede datas passadas e horários que já passaram quando a coleta é para hoje.
+## 6. Regras de cancelamento
 
-## Roteiro recomendado para a próxima etapa
+- Cliente: etapas 0 e 1 (antes da coleta).
+- Lavanderia: etapas 0, 1 e 2 (antes do início da lavagem).
+- Pedido entregue ou já cancelado: não pode ser cancelado novamente.
 
-1. **Notificações push:** avisar o cliente quando a lavanderia confirmar, coletar, iniciar a lavagem e concluir o pedido.
-2. **Pagamento real:** integrar um provedor (Pix/cartão) com confirmação por webhook no backend; nunca marcar como pago apenas pelo aplicativo.
-3. **Cancelamento e reembolso:** definir regras por etapa do pedido e registrar o histórico de alterações.
-4. **Chat/contato do pedido:** permitir comunicação entre cliente e lavanderia sem expor dados além do necessário.
-5. **Painel da loja:** relatórios por período, exportação, gestão de horários/áreas de coleta e histórico de status.
-6. **Qualidade e produção:** testes automatizados, monitoramento de erros, política de privacidade e termos de uso.
+A regra é validada pela função `cancel_order` no banco, e não apenas pela interface.
 
-Esses itens são sugestões de roadmap, não funcionalidades já implementadas nesta versão.
+## 7. Observações
+
+- O faturamento dos relatórios é bruto, calculado a partir dos pedidos entregues; não desconta taxas, estornos ou despesas.
+- O chat exige Realtime habilitado no projeto Supabase.
+- O push precisa de build nativo e credenciais configuradas; a lista interna de notificações não depende de permissões de push.
+- Não compartilhe `.env`, chaves privadas ou `service_role`.

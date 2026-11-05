@@ -10,4 +10,6 @@ export type LaundryOrder = {
   address?: string;
   instructions?: string;
   payment?: string;
+  status?: string;
+  paymentStatus?: string;
 };

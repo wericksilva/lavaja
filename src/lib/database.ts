@@ -52,7 +52,7 @@ export async function getLaundryServices(laundryId: string, activeOnly = false):
 export async function getRelatedOrders(userId: string, isStore: boolean, laundryId?: string) {
   let query = supabase
     .from('orders')
-    .select('*, laundries(name), payments(status, method)');
+    .select('*, laundries(name)');
 
   if (isStore) {
     if (!laundryId) {
@@ -72,7 +72,7 @@ export async function getRelatedOrders(userId: string, isStore: boolean, laundry
   return isStore ? rows.filter((row) => row.laundry_id === laundryId) : rows;
 }
 
-type DbOrderRow = { id: string; order_number: string | null; service_name: string; scheduled_date: string | null; created_at: string; total: number | string; current_step: number | null; scheduled_time: string | null; address: string; instructions: string; payment_method: string; laundry_id: string; laundries?: { name?: string } | null };
+type DbOrderRow = { id: string; order_number: string | null; service_name: string; scheduled_date: string | null; created_at: string; total: number | string; current_step: number | null; scheduled_time: string | null; address: string; instructions: string; payment_method: string; laundry_id: string; status?: string; payment_status?: string; laundries?: { name?: string } | null };
 
 export function mapDbOrder(row: DbOrderRow) {
   return {
@@ -82,6 +82,6 @@ export function mapDbOrder(row: DbOrderRow) {
     date: row.scheduled_date ? new Date(`${row.scheduled_date}T12:00:00`).toLocaleDateString('pt-BR') : new Date(row.created_at).toLocaleDateString('pt-BR'),
     value: Number(row.total), currentStep: Number(row.current_step ?? 0),
     time: row.scheduled_time ?? '', address: row.address ?? '', instructions: row.instructions ?? '',
-    payment: paymentFromDbValue(row.payment_method), laundryId: row.laundry_id, laundryName: row.laundries?.name ?? '',
+    payment: paymentFromDbValue(row.payment_method), laundryId: row.laundry_id, laundryName: row.laundries?.name ?? '', status: row.status,
   };
 }

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { supabase } from './src/lib/supabase';
 import { ensureStoreLaundry, getActiveLaundries, getRelatedOrders, mapDbOrder } from './src/lib/database';
 
@@ -29,6 +31,11 @@ import ServicesScreen from './src/screens/Services/ServicesScreen';
 import type { LaundryOrder } from './src/types/order';
 import { formatDatePtBr, getTodayISODate } from './src/utils/date';
 import { paymentToDbValue } from './src/utils/payment';
+import ChatScreen from './src/screens/Chat/ChatScreen';
+import ReportsScreen from './src/screens/Reports/ReportsScreen';
+import NotificationsScreen from './src/screens/Notifications/NotificationsScreen';
+
+Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 
 export default function App() {
   // Navegação
@@ -39,6 +46,8 @@ export default function App() {
 
   // Dados do usuário
   const [profileId, setProfileId] = useState('');
+  const [pushToken, setPushToken] = useState('');
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [storeLaundryId, setStoreLaundryId] = useState('');
   const [availableLaundries, setAvailableLaundries] = useState<Laundry[]>([]);
   const [selectedServiceDetails, setSelectedServiceDetails] = useState<ServiceItem>(services[0]);
@@ -59,6 +68,44 @@ export default function App() {
     weeklyRevenue: [],
   });
   const [dashboardLoading, setDashboardLoading] = useState(false);
+
+  // Registra o dispositivo no Expo Push e vincula o token ao usuário logado.
+  useEffect(() => {
+    if (!profileId || Platform.OS === 'web') return;
+    let active = true;
+    const registerPushToken = async () => {
+      try {
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+        if (!projectId) return; // Configure o projectId após executar eas init.
+        const permission = await Notifications.getPermissionsAsync();
+        let granted = permission.granted;
+        if (!granted) granted = (await Notifications.requestPermissionsAsync()).granted;
+        if (!granted || !active) return;
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('orders', { name: 'Atualizações de pedidos', importance: Notifications.AndroidImportance.MAX, vibrationPattern: [0, 250, 250, 250], lightColor: '#1769E0' });
+        }
+        const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
+        if (!active || !token) return;
+        setPushToken(token);
+        await supabase.rpc('register_expo_push_token', { p_token: token, p_platform: Platform.OS });
+      } catch { /* Push é opcional; não deve impedir o uso do app. */ }
+    };
+    void registerPushToken();
+    return () => { active = false; };
+  }, [profileId]);
+
+  // Atualiza o contador de notificações não lidas em tempo real.
+  useEffect(() => {
+    if (!profileId) { setUnreadNotifications(0); return; }
+    let active = true;
+    const loadCount = async () => {
+      const { count } = await supabase.from('app_notifications').select('id', { count: 'exact', head: true }).eq('user_id', profileId).eq('is_read', false);
+      if (active) setUnreadNotifications(count ?? 0);
+    };
+    void loadCount();
+    const channel = supabase.channel(`notifications-${profileId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'app_notifications', filter: `user_id=eq.${profileId}` }, () => { void loadCount(); }).subscribe();
+    return () => { active = false; void supabase.removeChannel(channel); };
+  }, [profileId]);
 
   // Restaura a sessão e carrega o perfil salvo no Supabase
   useEffect(() => {
@@ -134,7 +181,7 @@ export default function App() {
   const [date, setDate] = useState(getTodayISODate());
   const [time, setTime] = useState('14:00');
 
-  const [payment, setPayment] = useState<PaymentMethod>('Pix');
+  const [payment, setPayment] = useState<PaymentMethod>('Pagar na entrega');
   const [instructions, setInstructions] = useState('');
 
   const [orderNumber, setOrderNumber] = useState('');
@@ -143,6 +190,21 @@ export default function App() {
 
   // Pedidos
   const [orders, setOrders] = useState<LaundryOrder[]>([]);
+
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { orderId?: string };
+      if (!data.orderId) return;
+      const order = orders.find((item) => (item as LaundryOrder & { dbId?: string }).dbId === data.orderId);
+      if (order) {
+        setSelectedOrderId(order.id);
+        setScreen('tracking');
+      } else {
+        setScreen('notifications');
+      }
+    });
+    return () => subscription.remove();
+  }, [orders]);
 
   const [selectedOrderId, setSelectedOrderId] = useState('LJ-2048');
 
@@ -514,6 +576,8 @@ const updateOrderStep = async (value: string) => {
     if (storeLaundryId) {
       await loadStoreDashboard(storeLaundryId);
     }
+    // A função valida o vínculo da loja e entrega o push ao outro participante.
+    void supabase.functions.invoke('notify-order-status', { body: { order_id: dbId, status: newStatus } });
 
     showAppMessage(
       'Pedido atualizado!',
@@ -531,6 +595,27 @@ const updateOrderStep = async (value: string) => {
 };
 
 
+
+
+  const cancelOrder = async (displayId: string): Promise<void> => {
+    const order = orders.find((item) => item.id === displayId) as (LaundryOrder & { dbId?: string }) | undefined;
+    if (!order?.dbId) { showAppMessage('Pedido não localizado', 'Não foi possível identificar o pedido no banco.'); return; }
+    const executeCancellation = async () => {
+      const { error } = await supabase.rpc('cancel_order', { p_order_id: order.dbId, p_reason: 'Cancelado pelo aplicativo' });
+      if (error) { showAppMessage('Não foi possível cancelar', error.message); return; }
+      await refreshOrders();
+      void supabase.functions.invoke('notify-order-status', { body: { order_id: order.dbId, status: 'cancelled' } });
+      showAppMessage('Pedido cancelado', 'O cancelamento foi registrado. Se houve pagamento, entre em contato com o suporte para solicitar o estorno.');
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Deseja cancelar o pedido ${displayId}?`)) await executeCancellation();
+    } else {
+      Alert.alert('Cancelar pedido', `Deseja cancelar o pedido ${displayId}?`, [
+        { text: 'Manter pedido', style: 'cancel' },
+        { text: 'Cancelar pedido', style: 'destructive', onPress: () => { void executeCancellation(); } },
+      ]);
+    }
+  };
 
   // Exibe mensagens tanto no navegador quanto no aplicativo
   const showAppMessage = (title: string, message: string) => {
@@ -573,12 +658,16 @@ const updateOrderStep = async (value: string) => {
   };
 
   const logout = async () => {
+    if (profileId && pushToken) {
+      await supabase.from('expo_push_tokens').delete().eq('user_id', profileId).eq('expo_push_token', pushToken);
+    }
     const { error } = await supabase.auth.signOut();
     if (error) {
       showAppMessage('Não foi possível sair', error.message);
       return;
     }
     setProfileId('');
+    setPushToken('');
     setStoreLaundryId('');
     setOrders([]);
     setReviews([]);
@@ -855,19 +944,10 @@ const updateOrderStep = async (value: string) => {
         return;
       }
 
-      const { error: paymentError } = await supabase.from('payments').insert({
-        order_id: orderRow.id,
-        amount: orderTotal,
-        method: paymentToDbValue(payment),
-        status: 'pending',
-      });
-
-      if (paymentError) {
-        showAppMessage(
-          'Pedido criado com pagamento pendente',
-          `O pedido ${orderNumberValue} foi criado, mas o registro financeiro não foi concluído. Entre em contato com a lavanderia antes de realizar qualquer pagamento. Detalhe: ${paymentError.message}`,
-        );
-      }
+      // Nesta versão apenas registramos a forma de pagamento escolhida no pedido.
+      // A cobrança online (Pix/cartão/checkout) será implementada em uma etapa futura.
+      // A lavanderia recebe uma notificação quando um novo pedido é criado.
+      void supabase.functions.invoke('notify-order-status', { body: { order_id: orderRow.id, status: 'pending' } });
 
       const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = {
         id: orderNumberValue,
@@ -901,7 +981,7 @@ const updateOrderStep = async (value: string) => {
     setInstructions('');
     setDate(getTodayISODate());
     setTime('14:00');
-    setPayment('Pix');
+    setPayment('Pagar na entrega');
 
     // Mantém a lavanderia escolhida e os dados da sessão
     goHome();
@@ -955,6 +1035,7 @@ const updateOrderStep = async (value: string) => {
           onChangeOrder={updateOrderStep}
           onBack={goHome}
           onServices={() => setScreen('services')}
+          onReports={() => setScreen('reports')}
         />
       );
 
@@ -988,9 +1069,43 @@ const updateOrderStep = async (value: string) => {
           reviews={reviews}
           onSubmitReview={submitReview}
           onRefreshOrders={refreshOrders}
+          onOpenChat={(id) => { setSelectedOrderId(id); setScreen('chat'); }}
+          onCancelOrder={cancelOrder}
           onNewOrder={() => { setSelectedLaundry(null); setSelectedServiceDetails(services[0]); setScreen('home'); }}
         />
       );
+
+    case 'chat': {
+      const chatOrder = orders.find((item) => item.id === selectedOrderId) as (LaundryOrder & { dbId?: string }) | undefined;
+      if (!chatOrder?.dbId || !profileId) return null;
+      return <ChatScreen orderId={chatOrder.dbId} userId={profileId} onBack={() => setScreen('orders')} />;
+    }
+
+    case 'notifications':
+      return (
+        <NotificationsScreen
+          userId={profileId}
+          onBack={() => setScreen('home')}
+          onOpenOrder={async (dbOrderId) => {
+            const existing = orders.find((item) => (item as LaundryOrder & { dbId?: string }).dbId === dbOrderId);
+            if (existing) {
+              setSelectedOrderId(existing.id);
+            } else {
+              const { data, error } = await supabase.from('orders').select('*, laundries(name)').eq('id', dbOrderId).maybeSingle();
+              if (error || !data) { showAppMessage('Pedido não encontrado', error?.message ?? 'Este pedido não está disponível para sua conta.'); return; }
+              const mapped = mapDbOrder(data as Parameters<typeof mapDbOrder>[0]);
+              setOrders((current) => [mapped, ...current]);
+              setSelectedOrderId(mapped.id);
+            }
+            setScreen('tracking');
+          }}
+          onUnreadCountChange={setUnreadNotifications}
+        />
+      );
+
+    case 'reports':
+      if (accountType !== 'store') return null;
+      return <ReportsScreen orders={orders} onBack={() => setScreen('admin')} />;
 
     case 'profile':
       return (
@@ -1052,6 +1167,7 @@ const updateOrderStep = async (value: string) => {
           onRefreshDashboard={() => {
             if (storeLaundryId) void loadStoreDashboard(storeLaundryId);
           }}
+          unreadNotifications={unreadNotifications}
         />
       );
 
