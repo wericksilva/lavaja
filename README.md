@@ -26,7 +26,7 @@ Projeto baseado nas telas originais do LavaJá. O ZIP não contém credenciais.
 
 ## Importante — escopo e validação
 
-Esta é uma etapa de integração do projeto, não uma declaração de que todos os fluxos foram validados em produção. A edição do perfil e o cadastro/edição/exclusão de serviços ainda precisam ser conectados às respectivas operações Supabase; a consulta de avaliações e a sincronização completa de pagamentos também precisam ser finalizadas. O fluxo de agendamento mantém os campos e telas existentes, mas a data selecionada ainda precisa ser convertida para o formato `YYYY-MM-DD` antes de persistir.
+Esta é uma etapa de integração do projeto, não uma declaração de que todos os fluxos foram validados em produção. A edição do perfil e o cadastro/edição/exclusão de serviços ainda precisam ser conectados às respectivas operações Supabase. O pagamento nesta versão é apenas um registro de método escolhido e status pendente; não há cobrança real por Pix ou cartão.
 
 As políticas RLS informadas foram consideradas nas operações principais. Não desative RLS para fazer o app funcionar. A política de inserção de avaliações contém a condição redundante `o.laundry_id = o.laundry_id`; revise-a no Supabase antes de usar avaliações em produção.
 
@@ -49,3 +49,10 @@ As políticas RLS informadas foram consideradas nas operações principais. Não
 1. Configure as variáveis `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` em `.env`.
 2. Execute `npm ci`.
 3. Execute `npx expo start -c`.
+
+
+## Correção dos métodos de pagamento
+
+Foi corrigido o envio dos métodos para o Supabase: a interface continua mostrando **Pix**, **Cartão de crédito** e **Pagar na entrega**, mas o aplicativo grava os códigos estáveis `pix`, `credit_card` e `cash`. Isso evita incompatibilidade com os nomes exibidos na tela.
+
+Se o banco já tiver uma restrição `CHECK` nas colunas `payments.method` ou `orders.payment_method`, execute uma única vez o SQL em `supabase/migrations/20261105_fix_payment_method_check.sql` no SQL Editor do Supabase. A migration remove apenas as restrições `CHECK` dessas colunas; não apaga tabelas nem registros.

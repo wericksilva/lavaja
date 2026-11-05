@@ -28,6 +28,7 @@ import ServicesScreen from './src/screens/Services/ServicesScreen';
 
 import type { LaundryOrder } from './src/types/order';
 import { formatDatePtBr, getTodayISODate } from './src/utils/date';
+import { paymentToDbValue } from './src/utils/payment';
 
 export default function App() {
   // Navegação
@@ -742,10 +743,10 @@ const updateOrderStep = async (value: string) => {
       order_number: orderNumberValue, client_id: profileId, laundry_id: selectedLaundry.id,
       service_id: serviceRow?.id ?? null, service_name: service, service_price: servicePrice,
       delivery_fee: deliveryFee, total: servicePrice + deliveryFee, status: 'pending', current_step: 0,
-      scheduled_date: date, scheduled_time: time, address: address.trim(), instructions: instructions.trim(), payment_method: payment,
+      scheduled_date: date, scheduled_time: time, address: address.trim(), instructions: instructions.trim(), payment_method: paymentToDbValue(payment),
     }).select('id').single();
     if (error || !orderRow) { showAppMessage('Erro ao criar pedido', error?.message ?? 'O pedido não foi retornado pelo banco.'); return; }
-    const { error: paymentError } = await supabase.from('payments').insert({ order_id: orderRow.id, amount: servicePrice + deliveryFee, method: payment, status: 'pending' });
+    const { error: paymentError } = await supabase.from('payments').insert({ order_id: orderRow.id, amount: servicePrice + deliveryFee, method: paymentToDbValue(payment), status: 'pending' });
     if (paymentError) { showAppMessage('Pedido criado, pagamento pendente', `Pedido ${orderNumberValue} criado, mas o pagamento não foi registrado: ${paymentError.message}`); }
     const newOrder: LaundryOrder & { dbId?: string; laundryId?: string } = { id: orderNumberValue, dbId: orderRow.id, laundryId: selectedLaundry.id, service, date: formatDatePtBr(date), value: servicePrice + deliveryFee, currentStep: 0, time, address, instructions, payment };
     setOrders((previous) => [newOrder, ...previous]);

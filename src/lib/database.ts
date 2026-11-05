@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { paymentFromDbValue } from '../utils/payment';
 
 export type DbLaundry = {
   id: string; name: string; description: string; address: string; phone: string;
@@ -81,6 +82,6 @@ export function mapDbOrder(row: DbOrderRow) {
     date: row.scheduled_date ? new Date(`${row.scheduled_date}T12:00:00`).toLocaleDateString('pt-BR') : new Date(row.created_at).toLocaleDateString('pt-BR'),
     value: Number(row.total), currentStep: Number(row.current_step ?? 0),
     time: row.scheduled_time ?? '', address: row.address ?? '', instructions: row.instructions ?? '',
-    payment: row.payment_method ?? 'Pix', laundryId: row.laundry_id, laundryName: row.laundries?.name ?? '',
+    payment: paymentFromDbValue(row.payment_method), laundryId: row.laundry_id, laundryName: row.laundries?.name ?? '',
   };
 }
