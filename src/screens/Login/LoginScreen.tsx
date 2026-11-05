@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 
 import {
@@ -91,12 +90,11 @@ export default function LoginScreen({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.authHero}>
-            {/* LOGO CLICÁVEL: ATUALIZA A PÁGINA */}
             <TouchableOpacity
               onPress={handleLogoPress}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="Atualizar página LavaJá"
+              accessibilityLabel="Logo LavaJá"
             >
               <Brand />
             </TouchableOpacity>
@@ -130,7 +128,6 @@ export default function LoginScreen({
               Entre para agendar sua próxima coleta.
             </Text>
 
-            {/* E-MAIL */}
             <Field
               label="E-mail"
               value={email}
@@ -149,7 +146,6 @@ export default function LoginScreen({
               </Text>
             ) : null}
 
-            {/* SENHA */}
             <Field
               label="Senha"
               value={password}
@@ -168,7 +164,6 @@ export default function LoginScreen({
               </Text>
             ) : null}
 
-            {/* RECUPERAÇÃO DE SENHA */}
             <TouchableOpacity
               style={styles.forgot}
               onPress={() => navigate('forgotPassword')}
@@ -199,16 +194,6 @@ export default function LoginScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              onPress={showHome}
-              style={styles.demoLink}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.demoText}>
-                Explorar o app de demonstração
-              </Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

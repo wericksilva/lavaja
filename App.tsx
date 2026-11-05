@@ -14,7 +14,9 @@ import HomeScreen from './src/screens/Home/HomeScreen';
 import ScheduleScreen from './src/screens/Schedule/ScheduleScreen';
 import PaymentScreen from './src/screens/Payment/PaymentScreen';
 import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
-import OrdersScreen from './src/screens/Orders/OrdersScreen';
+import OrdersScreen, {
+  type Review,
+} from './src/screens/Orders/OrdersScreen';
 import ProfileScreen from './src/screens/Profile/ProfileScreen';
 import HelpSupportScreen from './src/screens/HelpSupport/HelpSupportScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPassword/ForgotPasswordScreen';
@@ -26,7 +28,11 @@ import ServicesScreen from './src/screens/Services/ServicesScreen';
 import type { LaundryOrder } from './src/types/order';
 
 export default function App() {
+  // Navegação
   const [screen, setScreen] = useState<Screen>('login');
+
+  // Avaliações
+  const [reviews, setReviews] = useState<Review[]>([]);
 
   // Dados do usuário
   const [name, setName] = useState('');
@@ -87,6 +93,40 @@ export default function App() {
   // Retorna à tela inicial sem encerrar a sessão
   const goHome = () => {
     setScreen('home');
+  };
+
+  // Registra a avaliação de um pedido entregue
+  const submitReview = (
+    orderId: string,
+    rating: number,
+    comment: string,
+  ) => {
+    const order = orders.find((item) => item.id === orderId);
+
+    if (!order || order.currentStep !== 5) {
+      Alert.alert(
+        'Pedido não entregue',
+        'Você só pode avaliar um pedido depois da entrega.',
+      );
+      return;
+    }
+
+    if (reviews.some((review) => review.orderId === orderId)) {
+      Alert.alert('Atenção', 'Este pedido já foi avaliado.');
+      return;
+    }
+
+    setReviews((previous) => [
+      ...previous,
+      {
+        orderId,
+        rating,
+        comment,
+        createdAt: new Date().toLocaleDateString('pt-BR'),
+      },
+    ]);
+
+    Alert.alert('Obrigado!', 'Sua avaliação foi registrada com sucesso.');
   };
 
   // Serviço + taxa de entrega
@@ -300,6 +340,8 @@ export default function App() {
             setSelectedOrderId(id);
             setScreen('tracking');
           }}
+          reviews={reviews}
+          onSubmitReview={submitReview}
         />
       );
 

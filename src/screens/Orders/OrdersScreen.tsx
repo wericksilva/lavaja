@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -7,6 +6,9 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,11 +19,24 @@ import type { Navigate } from '../../types';
 import { money } from '../../utils/money';
 import type { LaundryOrder } from '../../types/order';
 
+export type Review = {
+  orderId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+};
+
 type Props = {
   navigate: Navigate;
   orders: LaundryOrder[];
   onTrack: (id: string) => void;
   isStore: boolean;
+  reviews: Review[];
+  onSubmitReview: (
+    orderId: string,
+    rating: number,
+    comment: string,
+  ) => void;
 };
 
 export default function OrdersScreen({
@@ -29,14 +44,52 @@ export default function OrdersScreen({
   orders,
   onTrack,
   isStore,
+  reviews,
+  onSubmitReview,
 }: Props) {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
+  const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewComment, setReviewComment] = useState('');
+
+  const openReview = (orderId: string) => {
+    setReviewOrderId(orderId);
+    setReviewRating(0);
+    setReviewComment('');
+  };
+
+  const closeReview = () => {
+    setReviewOrderId(null);
+    setReviewRating(0);
+    setReviewComment('');
+  };
+
+  const submitCurrentReview = () => {
+    if (!reviewOrderId) return;
+
+    if (reviewRating === 0) {
+      Alert.alert(
+        'Avaliação necessária',
+        'Escolha uma nota de 1 a 5 estrelas.',
+      );
+      return;
+    }
+
+    onSubmitReview(
+      reviewOrderId,
+      reviewRating,
+      reviewComment.trim(),
+    );
+
+    closeReview();
+    Alert.alert('Obrigado!', 'Sua avaliação foi registrada.');
+  };
 
   const toggleDetails = (id: string) => {
     setExpandedOrders((current) =>
       current.includes(id)
         ? current.filter((orderId) => orderId !== id)
-        : [...current, id]
+        : [...current, id],
     );
   };
 
@@ -88,11 +141,15 @@ export default function OrdersScreen({
             const isCompleted = order.currentStep === 5;
             const isExpanded = expandedOrders.includes(order.id);
 
+            const existingReview = reviews.find(
+              (review) => review.orderId === order.id,
+            );
+
             const hasExtraDetails = Boolean(
               order.time ||
-              order.address ||
-              order.instructions ||
-              order.payment
+                order.address ||
+                order.instructions ||
+                order.payment,
             );
 
             return (
@@ -246,6 +303,39 @@ export default function OrdersScreen({
                     />
                   </TouchableOpacity>
                 </View>
+
+                {isCompleted && !isStore && (
+                  <View style={styles.reviewSection}>
+                    {existingReview ? (
+                      <View style={styles.reviewDone}>
+                        <Ionicons
+                          name="checkmark-circle"
+                          size={18}
+                          color={C.green}
+                        />
+                        <Text style={styles.reviewDoneText}>
+                          Você avaliou este serviço: {existingReview.rating}/5
+                          estrelas
+                        </Text>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.reviewButton}
+                        onPress={() => openReview(order.id)}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name="star-outline"
+                          size={19}
+                          color={C.white}
+                        />
+                        <Text style={styles.reviewButtonText}>
+                          Avaliar serviço
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
               </View>
             );
           })
@@ -295,16 +385,91 @@ export default function OrdersScreen({
         </Text>
       </ScrollView>
 
+      <Modal
+        visible={reviewOrderId !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={closeReview}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.reviewModal}>
+            <TouchableOpacity
+              style={styles.modalClose}
+              onPress={closeReview}
+              activeOpacity={0.7}
+            >
+              <Ionicons name="close" size={24} color={C.muted} />
+            </TouchableOpacity>
+
+            <Ionicons name="star" size={35} color="#F5B82E" />
+
+            <Text style={styles.modalTitle}>
+              Avalie nosso serviço
+            </Text>
+
+            <Text style={styles.modalSubtitle}>
+              Como foi sua experiência com a lavanderia?
+            </Text>
+
+            <View style={styles.starsContainer}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <TouchableOpacity
+                  key={star}
+                  onPress={() => setReviewRating(star)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name={star <= reviewRating ? 'star' : 'star-outline'}
+                    size={38}
+                    color="#F5B82E"
+                  />
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.ratingDescription}>
+              {reviewRating === 0
+                ? 'Selecione sua nota'
+                : `${reviewRating} de 5 estrelas`}
+            </Text>
+
+            <TextInput
+              style={styles.commentInput}
+              placeholder="Conte como foi sua experiência (opcional)"
+              placeholderTextColor={C.muted}
+              multiline
+              value={reviewComment}
+              onChangeText={setReviewComment}
+              textAlignVertical="top"
+            />
+
+            <TouchableOpacity
+              style={styles.submitReview}
+              onPress={submitCurrentReview}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.submitReviewText}>
+                Enviar avaliação
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.cancelReview}
+              onPress={closeReview}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.cancelReviewText}>Cancelar</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <View style={styles.bottomNav}>
         <TouchableOpacity
           style={styles.navItem}
           onPress={() => navigate('home')}
         >
-          <Ionicons
-            name="home-outline"
-            size={21}
-            color={C.muted}
-          />
+          <Ionicons name="home-outline" size={21} color={C.muted} />
           <Text style={styles.navText}>Início</Text>
         </TouchableOpacity>
 
@@ -317,11 +482,7 @@ export default function OrdersScreen({
           style={styles.navItem}
           onPress={() => navigate('profile')}
         >
-          <Ionicons
-            name="person-outline"
-            size={21}
-            color={C.muted}
-          />
+          <Ionicons name="person-outline" size={21} color={C.muted} />
           <Text style={styles.navText}>Perfil</Text>
         </TouchableOpacity>
       </View>
@@ -541,6 +702,37 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
+  reviewSection: {
+    marginTop: 13,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: C.line,
+  },
+  reviewButton: {
+    backgroundColor: C.blue,
+    borderRadius: 11,
+    padding: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  reviewButtonText: {
+    color: C.white,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  reviewDone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  reviewDoneText: {
+    color: C.green,
+    fontSize: 12,
+    fontWeight: '700',
+    flexShrink: 1,
+  },
   emptyCard: {
     backgroundColor: C.white,
     borderRadius: 18,
@@ -613,6 +805,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 13,
     paddingHorizontal: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  reviewModal: {
+    width: '100%',
+    maxWidth: 420,
+    backgroundColor: C.white,
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalClose: {
+    alignSelf: 'flex-end',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    color: C.navy,
+    fontSize: 21,
+    fontWeight: '900',
+    marginTop: 12,
+  },
+  modalSubtitle: {
+    color: C.muted,
+    fontSize: 12,
+    textAlign: 'center',
+    marginTop: 7,
+  },
+  starsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 9,
+    marginTop: 22,
+  },
+  ratingDescription: {
+    color: C.blue,
+    fontSize: 12,
+    fontWeight: '700',
+    marginTop: 10,
+    marginBottom: 18,
+  },
+  commentInput: {
+    width: '100%',
+    minHeight: 105,
+    borderWidth: 1,
+    borderColor: C.line,
+    borderRadius: 13,
+    padding: 13,
+    color: C.navy,
+    fontSize: 13,
+    marginBottom: 18,
+  },
+  submitReview: {
+    width: '100%',
+    backgroundColor: C.blue,
+    borderRadius: 12,
+    padding: 15,
+    alignItems: 'center',
+  },
+  submitReviewText: {
+    color: C.white,
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cancelReview: {
+    padding: 12,
+    marginTop: 5,
+  },
+  cancelReviewText: {
+    color: C.muted,
+    fontSize: 12,
+    fontWeight: '700',
   },
   bottomNav: {
     flexDirection: 'row',
