@@ -16,6 +16,24 @@ import type { Laundry } from '../../data/laundries';
 import { money } from '../../utils/money';
 import type { Navigate, Service } from '../../types';
 
+export type DashboardData = {
+  receivedToday: number;
+  pending: number;
+  inProgress: number;
+  completedMonth: number;
+  ordersValueMonth: number;
+  weeklyRevenue: { day: string; value: number }[];
+};
+
+const EMPTY_DASHBOARD: DashboardData = {
+  receivedToday: 0,
+  pending: 0,
+  inProgress: 0,
+  completedMonth: 0,
+  ordersValueMonth: 0,
+  weeklyRevenue: [],
+};
+
 type Props = {
   name: string;
   setService: (value: Service) => void;
@@ -24,17 +42,10 @@ type Props = {
   selectedLaundry: Laundry | null;
   setSelectedLaundry: (value: Laundry) => void;
   availableLaundries?: Laundry[];
+  dashboardData?: DashboardData;
+  dashboardLoading?: boolean;
+  onRefreshDashboard?: () => void;
 };
-
-const weeklyRevenue = [
-  { day: 'Seg', value: 180 },
-  { day: 'Ter', value: 250 },
-  { day: 'Qua', value: 210 },
-  { day: 'Qui', value: 320 },
-  { day: 'Sex', value: 280 },
-  { day: 'Sáb', value: 420 },
-  { day: 'Dom', value: 150 },
-];
 
 export default function HomeScreen({
   name,
@@ -44,6 +55,9 @@ export default function HomeScreen({
   selectedLaundry,
   setSelectedLaundry,
   availableLaundries = [],
+  dashboardData = EMPTY_DASHBOARD,
+  dashboardLoading = false,
+  onRefreshDashboard = () => {},
 }: Props) {
   const firstName = name.trim().split(' ')[0] || 'Cliente';
   const [showDashboard, setShowDashboard] = useState(false);
@@ -64,12 +78,13 @@ export default function HomeScreen({
     navigate('schedule');
   };
 
-  const maxRevenue = Math.max(...weeklyRevenue.map((item) => item.value));
+  const weeklyRevenue = dashboardData.weeklyRevenue;
+  const maxRevenue = Math.max(1, ...weeklyRevenue.map((item) => item.value));
 
   const dashboardStats = [
     {
       title: 'Recebidos hoje',
-      value: '12',
+      value: String(dashboardData.receivedToday),
       icon: 'today-outline' as const,
       color: '#176B87',
       background: '#E8F3F6',
@@ -77,7 +92,7 @@ export default function HomeScreen({
     },
     {
       title: 'Aguardando aprovação',
-      value: '4',
+      value: String(dashboardData.pending),
       icon: 'time-outline' as const,
       color: '#D99120',
       background: '#FFF5E3',
@@ -85,7 +100,7 @@ export default function HomeScreen({
     },
     {
       title: 'Em andamento',
-      value: '8',
+      value: String(dashboardData.inProgress),
       icon: 'sync-outline' as const,
       color: '#3976C5',
       background: '#EAF2FF',
@@ -93,7 +108,7 @@ export default function HomeScreen({
     },
     {
       title: 'Concluídos',
-      value: '26',
+      value: String(dashboardData.completedMonth),
       icon: 'checkmark-circle-outline' as const,
        color: '#16865B',
       background: '#E7F7F1',
@@ -169,13 +184,20 @@ export default function HomeScreen({
                       </Text>
                     </View>
 
-                    <View style={styles.dashboardHeaderIcon}>
-                       <Ionicons
-                        name="analytics-outline"
+                    <TouchableOpacity
+                      style={styles.dashboardHeaderIcon}
+                      onPress={onRefreshDashboard}
+                      disabled={dashboardLoading}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Atualizar dados do dashboard"
+                    >
+                      <Ionicons
+                        name={dashboardLoading ? "hourglass-outline" : "refresh-outline"}
                         size={25}
                         color="#176B87"
                       />
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   {/* FATURAMENTO */}
@@ -183,11 +205,11 @@ export default function HomeScreen({
                     <View style={styles.revenueTop}>
                       <View>
                         <Text style={styles.revenueLabel}>
-                          Faturamento do mês
+                          Valor dos pedidos no mês
                         </Text>
 
                         <Text style={styles.revenueValue}>
-                          R$ 8.450,00
+                          {money(dashboardData.ordersValueMonth)}
                         </Text>
                       </View>
 
@@ -208,7 +230,7 @@ export default function HomeScreen({
                       />
 
                       <Text style={styles.revenueFooterText}>
-                        +12,5% em relação ao mês anterior
+                        Soma dos pedidos não cancelados neste mês
                       </Text>
                     </View>
                   </View>
@@ -254,7 +276,7 @@ export default function HomeScreen({
                     <View style={styles.chartHeader}>
                       <View>
                         <Text style={styles.chartTitle}>
-                          Faturamento semanal
+                          Valor dos pedidos na semana
                         </Text>
 
                         <Text style={styles.chartSubtitle}>
@@ -275,7 +297,7 @@ export default function HomeScreen({
                       {weeklyRevenue.map((item) => (
                         <View key={item.day} style={styles.chartColumn}>
                           <Text style={styles.chartBarValue}>
-                            {item.value}
+                            {Math.round(item.value)}
                           </Text>
 
                           <View style={styles.chartBarBackground}>
@@ -299,7 +321,7 @@ export default function HomeScreen({
                     <View style={styles.chartLegend}>
                       <View style={styles.chartLegendDot} />
                       <Text style={styles.chartLegendText}>
-                        Faturamento diário em reais
+                        Valor dos pedidos por dia (R$)
                       </Text>
                     </View>
                   </View>
@@ -316,7 +338,7 @@ export default function HomeScreen({
 
                     <View style={{ flex: 1 }}>
                       <Text style={styles.pendingTitle}>
-                        Você tem 4 pedidos pendentes
+                        Você tem {dashboardData.pending} pedidos pendentes
                       </Text>
 
                       <Text style={styles.pendingDescription}>
@@ -434,7 +456,7 @@ export default function HomeScreen({
 
                     <TouchableOpacity
                     style={styles.storeBannerButton}
-                      onPress={() => setShowDashboard(true)}
+                      onPress={() => { setShowDashboard(true); onRefreshDashboard(); }}
                       activeOpacity={0.8}
                     >
                       <Ionicons
@@ -463,7 +485,7 @@ export default function HomeScreen({
                   <View style={styles.quickActions}>
                     <TouchableOpacity
                       style={styles.quickAction}
-                      onPress={() => setShowDashboard(true)}
+                      onPress={() => { setShowDashboard(true); onRefreshDashboard(); }}
                       activeOpacity={0.8}
                     >
                       <View style={styles.quickActionIcon}>

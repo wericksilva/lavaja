@@ -11,7 +11,7 @@ import LoginScreen from './src/screens/Login/LoginScreen';
 import RegisterScreen, {
   type AccountType,
 } from './src/screens/Register/RegisterScreen';
-import HomeScreen from './src/screens/Home/HomeScreen';
+import HomeScreen, { type DashboardData } from './src/screens/Home/HomeScreen';
 import ScheduleScreen from './src/screens/Schedule/ScheduleScreen';
 import PaymentScreen from './src/screens/Payment/PaymentScreen';
 import ConfirmationScreen from './src/screens/Confirmation/ConfirmationScreen';
@@ -47,6 +47,16 @@ export default function App() {
 
   // Tipo de conta
   const [accountType, setAccountType] = useState<AccountType>('client');
+
+  const [dashboardData, setDashboardData] = useState<DashboardData>({
+    receivedToday: 0,
+    pending: 0,
+    inProgress: 0,
+    completedMonth: 0,
+    ordersValueMonth: 0,
+    weeklyRevenue: [],
+  });
+  const [dashboardLoading, setDashboardLoading] = useState(false);
 
   // Restaura a sessão e carrega o perfil salvo no Supabase
   useEffect(() => {
@@ -136,6 +146,84 @@ export default function App() {
 
   const selectedService = selectedServiceDetails;
 
+  // Busca os indicadores diretamente da tabela orders no Supabase.
+  const loadStoreDashboard = async (laundryId: string) => {
+    if (!laundryId) return;
+
+    setDashboardLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, total, status, created_at')
+        .eq('laundry_id', laundryId)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const rows = data ?? [];
+      const now = new Date();
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6);
+      const todayTime = startOfToday.getTime();
+      const monthTime = startOfMonth.getTime();
+
+      const notCancelled = rows.filter((order) => order.status !== 'cancelled');
+      const receivedToday = notCancelled.filter(
+        (order) => new Date(order.created_at).getTime() >= todayTime,
+      ).length;
+
+      const pending = rows.filter((order) => order.status === 'pending').length;
+      const inProgress = rows.filter((order) =>
+        ['confirmed', 'pickup_scheduled', 'picked_up', 'washing', 'ready'].includes(order.status),
+      ).length;
+
+      const monthOrders = notCancelled.filter((order) => {
+        const createdAt = new Date(order.created_at).getTime();
+        return createdAt >= monthTime && createdAt <= now.getTime();
+      });
+
+      const completedMonth = monthOrders.filter((order) => order.status === 'delivered').length;
+      const ordersValueMonth = monthOrders.reduce(
+        (sum, order) => sum + Number(order.total ?? 0),
+        0,
+      );
+
+      const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const weeklyRevenue = Array.from({ length: 7 }, (_, index) => {
+        const day = new Date(startOfWeek);
+        day.setDate(startOfWeek.getDate() + index);
+        const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+        const dayEnd = dayStart + 24 * 60 * 60 * 1000;
+        const value = notCancelled
+          .filter((order) => {
+            const createdAt = new Date(order.created_at).getTime();
+            return createdAt >= dayStart && createdAt < dayEnd;
+          })
+          .reduce((sum, order) => sum + Number(order.total ?? 0), 0);
+
+        return { day: dayNames[day.getDay()], value };
+      });
+
+      // Ordena os sete dias do mais antigo ao mais recente, começando há seis dias.
+      setDashboardData({
+        receivedToday,
+        pending,
+        inProgress,
+        completedMonth,
+        ordersValueMonth,
+        weeklyRevenue,
+      });
+    } catch (error) {
+      showAppMessage(
+        'Erro ao carregar dashboard',
+        error instanceof Error ? error.message : 'Não foi possível consultar os pedidos da lavanderia.',
+      );
+    } finally {
+      setDashboardLoading(false);
+    }
+  };
+
   const loadWorkspace = async (userId: string, type: AccountType, displayName: string, userPhone: string) => {
     setProfileId(userId);
     try {
@@ -144,11 +232,61 @@ export default function App() {
         setStoreLaundryId(laundry.id);
         const rows = await getRelatedOrders(userId, true, laundry.id);
         setOrders(rows.map((row) => mapDbOrder(row as Parameters<typeof mapDbOrder>[0])));
+        await loadStoreDashboard(laundry.id);
         setSelectedLaundry({ id: laundry.id, name: laundry.name, rating: '0,0', distance: '', deliveryFee: Number(laundry.delivery_fee), address: laundry.address, description: laundry.description });
       } else {
-        const [laundriesRows, orderRows] = await Promise.all([getActiveLaundries(), getRelatedOrders(userId, false)]);
-        setAvailableLaundries(laundriesRows.map((item) => ({ id: item.id, name: item.name, rating: '0,0', distance: '', deliveryFee: Number(item.delivery_fee), address: item.address, description: item.description })));
-        setOrders(orderRows.map((row) => mapDbOrder(row as Parameters<typeof mapDbOrder>[0])));
+        const [laundriesRows, orderRows] = await Promise.all([
+          getActiveLaundries(),
+          getRelatedOrders(userId, false),
+        ]);
+
+        const mappedOrders = orderRows.map((row) =>
+          mapDbOrder(row as Parameters<typeof mapDbOrder>[0]),
+        );
+
+        setAvailableLaundries(
+          laundriesRows.map((item) => ({
+            id: item.id,
+            name: item.name,
+            rating: '0,0',
+            distance: '',
+            deliveryFee: Number(item.delivery_fee),
+            address: item.address,
+            description: item.description,
+          })),
+        );
+        setOrders(mappedOrders);
+
+        // Recupera as avaliações já salvas para que continuem aparecendo
+        // mesmo depois de sair da conta ou fechar o aplicativo.
+        const { data: reviewRows, error: reviewsError } = await supabase
+          .from('reviews')
+          .select('order_id, rating, comment, created_at')
+          .eq('client_id', userId)
+          .order('created_at', { ascending: false });
+
+        if (reviewsError) throw reviewsError;
+
+        const orderIdByDatabaseId = new Map<string, string>();
+        mappedOrders.forEach((order) => {
+          const dbId = (order as LaundryOrder & { dbId?: string }).dbId;
+          if (dbId) orderIdByDatabaseId.set(dbId, order.id);
+        });
+
+        setReviews(
+          (reviewRows ?? [])
+            .map((review) => {
+              const displayedOrderId = orderIdByDatabaseId.get(review.order_id);
+              if (!displayedOrderId) return null;
+              return {
+                orderId: displayedOrderId,
+                rating: Number(review.rating),
+                comment: review.comment ?? '',
+                createdAt: new Date(review.created_at).toLocaleDateString('pt-BR'),
+              };
+            })
+            .filter((review): review is Review => review !== null),
+        );
       }
     } catch (error) {
       showAppMessage('Erro ao carregar dados', error instanceof Error ? error.message : 'Não foi possível consultar o Supabase.');
@@ -160,33 +298,110 @@ export default function App() {
     setScreen('home');
   };
 
-  // Registra a avaliação de um pedido entregue
+  // Salva a avaliação no Supabase e só atualiza a interface após confirmar.
   const submitReview = async (
     orderId: string,
     rating: number,
     comment: string,
-  ) => {
+  ): Promise<boolean> => {
     const order = orders.find((item) => item.id === orderId);
 
     if (!order || order.currentStep !== 5) {
-      Alert.alert(
+      showAppMessage(
         'Pedido não entregue',
         'Você só pode avaliar um pedido depois da entrega.',
       );
-      return;
+      return false;
     }
 
     if (reviews.some((review) => review.orderId === orderId)) {
-      Alert.alert('Atenção', 'Este pedido já foi avaliado.');
-      return;
+      showAppMessage('Atenção', 'Este pedido já foi avaliado.');
+      return false;
     }
 
     const dbOrderId = (order as LaundryOrder & { dbId?: string }).dbId;
-    if (!dbOrderId || !profileId) { showAppMessage('Não foi possível avaliar', 'Pedido não localizado no banco de dados.'); return; }
-    const { error } = await supabase.from('reviews').insert({ order_id: dbOrderId, laundry_id: (order as LaundryOrder & { laundryId?: string }).laundryId, client_id: profileId, rating, comment: comment.trim() });
-    if (error) { showAppMessage('Erro ao salvar avaliação', error.message); return; }
-    setReviews((previous) => [...previous, { orderId, rating, comment, createdAt: new Date().toLocaleDateString('pt-BR') }]);
-    showAppMessage('Obrigado!', 'Sua avaliação foi registrada com sucesso.');
+    if (!dbOrderId || !profileId) {
+      showAppMessage(
+        'Não foi possível avaliar',
+        'Não encontramos o identificador do pedido ou do cliente no banco de dados.',
+      );
+      return false;
+    }
+
+    try {
+      // Busca os dados oficiais do pedido. Assim não dependemos de valores
+      // locais para preencher order_id, laundry_id ou validar a entrega.
+      const { data: dbOrder, error: orderError } = await supabase
+        .from('orders')
+        .select('id, laundry_id, client_id, current_step')
+        .eq('id', dbOrderId)
+        .eq('client_id', profileId)
+        .single();
+
+      if (orderError || !dbOrder) {
+        showAppMessage(
+          'Pedido não encontrado',
+          orderError?.message ?? 'Não foi possível localizar este pedido na sua conta.',
+        );
+        return false;
+      }
+
+      if (Number(dbOrder.current_step) !== 5) {
+        showAppMessage(
+          'Pedido não entregue',
+          'A avaliação só pode ser enviada depois que o pedido for entregue.',
+        );
+        return false;
+      }
+
+      if (!dbOrder.laundry_id) {
+        showAppMessage(
+          'Não foi possível avaliar',
+          'Este pedido não possui uma lavanderia vinculada.',
+        );
+        return false;
+      }
+
+      const { data: savedReview, error: insertError } = await supabase
+        .from('reviews')
+        .insert({
+          order_id: dbOrder.id,
+          laundry_id: dbOrder.laundry_id,
+          client_id: profileId,
+          rating,
+          comment: comment.trim(),
+        })
+        .select('order_id, rating, comment, created_at')
+        .single();
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          showAppMessage('Pedido já avaliado', 'Você já enviou uma avaliação para este pedido.');
+        } else {
+          showAppMessage('Erro ao salvar avaliação', insertError.message);
+        }
+        return false;
+      }
+
+      setReviews((previous) => [
+        ...previous.filter((review) => review.orderId !== orderId),
+        {
+          orderId,
+          rating: Number(savedReview.rating),
+          comment: savedReview.comment ?? '',
+          createdAt: new Date(savedReview.created_at).toLocaleDateString('pt-BR'),
+        },
+      ]);
+
+      showAppMessage('Obrigado!', 'Sua avaliação foi salva no banco de dados com sucesso.');
+      return true;
+    } catch (error) {
+      showAppMessage(
+        'Erro ao salvar avaliação',
+        error instanceof Error ? error.message : 'Ocorreu um erro inesperado ao salvar sua avaliação.',
+      );
+      return false;
+    }
   };
 
   // Serviço + taxa de entrega
@@ -279,6 +494,10 @@ const updateOrderStep = async (value: string) => {
           : item,
       ),
     );
+
+    if (storeLaundryId) {
+      await loadStoreDashboard(storeLaundryId);
+    }
 
     showAppMessage(
       'Pedido atualizado!',
@@ -681,6 +900,11 @@ const updateOrderStep = async (value: string) => {
           selectedLaundry={selectedLaundry}
           setSelectedLaundry={(laundry) => { setSelectedLaundry(laundry); setSelectedServiceDetails(services[0]); }}
           availableLaundries={availableLaundries}
+          dashboardData={dashboardData}
+          dashboardLoading={dashboardLoading}
+          onRefreshDashboard={() => {
+            if (storeLaundryId) void loadStoreDashboard(storeLaundryId);
+          }}
         />
       );
 
