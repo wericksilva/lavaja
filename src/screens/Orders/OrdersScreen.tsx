@@ -341,28 +341,7 @@ export default function OrdersScreen({
           })
         )}
 
-        <View style={styles.helpCard}>
-          <View style={styles.helpIcon}>
-            <Ionicons
-              name="chatbubble-ellipses-outline"
-              size={22}
-              color={C.blue}
-            />
-          </View>
-
-          <View style={{ flex: 1 }}>
-            <Text style={styles.helpTitle}>Precisa de ajuda?</Text>
-            <Text style={styles.helpText}>
-              Nossa equipe está pronta para ajudar com seu pedido.
-            </Text>
-          </View>
-
-          <Ionicons
-            name="chevron-forward"
-            size={18}
-            color={C.muted}
-          />
-        </View>
+       
 
         {!isStore && (
           <TouchableOpacity
@@ -754,35 +733,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 18,
     marginTop: 7,
-  },
-  helpCard: {
-    backgroundColor: '#EDF5FF',
-    borderRadius: 16,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 11,
-    marginTop: 4,
-    marginBottom: 16,
-  },
-  helpIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 13,
-    backgroundColor: C.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  helpTitle: {
-    color: C.navy,
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  helpText: {
-    color: C.muted,
-    fontSize: 11,
-    lineHeight: 16,
-    marginTop: 3,
   },
   newOrder: {
     backgroundColor: C.blue,
