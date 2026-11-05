@@ -44,6 +44,14 @@ export default function LoginScreen({
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
+  const handleLogoPress = () => {
+    if (Platform.OS === 'web') {
+      window.location.reload();
+    } else {
+      showHome();
+    }
+  };
+
   const validateAndLogin = () => {
     let valid = true;
 
@@ -83,8 +91,15 @@ export default function LoginScreen({
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.authHero}>
-            {/* LOGO CLICÁVEL */}
-            <Brand onPress={showHome} />
+            {/* LOGO CLICÁVEL: ATUALIZA A PÁGINA */}
+            <TouchableOpacity
+              onPress={handleLogoPress}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Atualizar página LavaJá"
+            >
+              <Brand />
+            </TouchableOpacity>
 
             <View style={styles.heroIllustration}>
               <View style={styles.bubbleOne} />

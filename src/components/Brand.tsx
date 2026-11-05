@@ -13,10 +13,10 @@ type Props = {
 export default function Brand({ onPress }: Props) {
   return (
     <TouchableOpacity
-      onPress={onPress}
       activeOpacity={0.7}
+      onPress={onPress}
       disabled={!onPress}
-      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityRole="button"
       accessibilityLabel="Voltar para a tela inicial do LavaJá"
     >
       <View style={styles.brandRow}>

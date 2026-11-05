@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -83,7 +84,12 @@ export default function App() {
   const selectedService =
     services.find((item) => item.name === service) ?? services[0];
 
-  // Serviço + taxa de entrega da lavanderia
+  // Retorna à tela inicial sem encerrar a sessão
+  const goHome = () => {
+    setScreen('home');
+  };
+
+  // Serviço + taxa de entrega
   const total = useMemo(
     () => selectedService.price + (selectedLaundry?.deliveryFee ?? 8.90),
     [selectedService, selectedLaundry],
@@ -162,7 +168,7 @@ export default function App() {
         'Lavanderia não selecionada',
         'Volte à tela inicial e escolha uma lavanderia.',
       );
-      setScreen('home');
+      goHome();
       return;
     }
 
@@ -215,8 +221,8 @@ export default function App() {
     setTime('14h–16h');
     setPayment('Pix');
 
-    // Mantém a lavanderia escolhida
-    setScreen('home');
+    // Mantém a lavanderia escolhida e os dados da sessão
+    goHome();
   };
 
   switch (screen) {
@@ -246,35 +252,43 @@ export default function App() {
       );
 
     case 'admin':
-  if (accountType !== 'store') {
-    return (
-      <HomeScreen
-        name={name}
-        setService={setService}
-        navigate={setScreen}
-        isStore={false}
-        selectedLaundry={selectedLaundry}
-        setSelectedLaundry={setSelectedLaundry}
-      />
-    );
-  }
-
-  return (
-    <AdminScreen
-      orders={orders}
-      onChangeOrder={updateOrderStep}
-      onBack={() => setScreen('home')}
-      onServices={() => setScreen('services')}
-    />
-  );
+      if (accountType !== 'store') {
+        return (
+          <HomeScreen
+            name={name}
+            setService={setService}
+            navigate={setScreen}
+            isStore={false}
+            selectedLaundry={selectedLaundry}
+            setSelectedLaundry={setSelectedLaundry}
+          />
+        );
+      }
 
       return (
         <AdminScreen
           orders={orders}
           onChangeOrder={updateOrderStep}
-          onBack={() => setScreen('orders')}
+          onBack={goHome}
+          onServices={() => setScreen('services')}
         />
       );
+
+    case 'services':
+      if (accountType !== 'store') {
+        return (
+          <HomeScreen
+            name={name}
+            setService={setService}
+            navigate={setScreen}
+            isStore={false}
+            selectedLaundry={selectedLaundry}
+            setSelectedLaundry={setSelectedLaundry}
+          />
+        );
+      }
+
+      return <ServicesScreen navigate={setScreen} />;
 
     case 'orders':
       return (
@@ -313,7 +327,7 @@ export default function App() {
           setPassword={setPassword}
           login={login}
           navigate={setScreen}
-          showHome={() => setScreen('home')}
+          showHome={goHome}
         />
       );
 
@@ -418,22 +432,6 @@ export default function App() {
         />
       );
 
-      case 'services':
-  if (accountType !== 'store') {
-    return (
-      <HomeScreen
-        name={name}
-        setService={setService}
-        navigate={setScreen}
-        isStore={false}
-        selectedLaundry={selectedLaundry}
-        setSelectedLaundry={setSelectedLaundry}
-      />
-    );
-  }
-
-  return <ServicesScreen navigate={setScreen} />;
-
     default:
       return (
         <LoginScreen
@@ -443,7 +441,7 @@ export default function App() {
           setPassword={setPassword}
           login={login}
           navigate={setScreen}
-          showHome={() => setScreen('home')}
+          showHome={goHome}
         />
       );
   }

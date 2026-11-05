@@ -1,3 +1,6 @@
+
+import { Ionicons } from '@expo/vector-icons';
+
 export type Screen =
   | 'login'
   | 'register'
@@ -15,5 +18,9 @@ export type Screen =
   | 'services';
 
 export type Service = string;
+
 export type PaymentMethod = string;
+
 export type Navigate = (screen: Screen) => void;
+
+export type IconName = keyof typeof Ionicons.glyphMap;

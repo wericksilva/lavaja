@@ -70,6 +70,14 @@ export default function ProfileScreen({
       return;
     }
 
+    const goHome = () => {
+  if (editing) {
+    cancelEditing();
+  }
+
+  navigate('home');
+};
+
     if (!draftEmail.trim()) {
       Alert.alert('Atenção', 'Informe seu e-mail.');
       return;
@@ -83,6 +91,13 @@ export default function ProfileScreen({
 
     Alert.alert('Sucesso', 'Seus dados foram atualizados!');
   };
+  const goHome = () => {
+  if (editing) {
+    cancelEditing();
+  }
+
+  navigate('home');
+};
 
   const sair = () => {
     Alert.alert(
@@ -103,15 +118,10 @@ export default function ProfileScreen({
       <StatusBar style="dark" />
 
       <Header
-        title="Meu perfil"
-        onBack={() => {
-          if (editing) {
-            cancelEditing();
-          }
-          navigate('home');
-        }}
-      />
-
+  title="Meu perfil"
+  onBack={goHome}
+  onHome={goHome}
+/>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}

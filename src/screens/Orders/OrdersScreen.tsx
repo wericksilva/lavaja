@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -43,7 +44,11 @@ export default function OrdersScreen({
     <SafeAreaView style={styles.safe}>
       <StatusBar style="dark" />
 
-      <Header title="Meus pedidos" onBack={() => navigate('home')} />
+      <Header
+        title="Meus pedidos"
+        onBack={() => navigate('home')}
+        onHome={() => navigate('home')}
+      />
 
       <ScrollView
         contentContainerStyle={styles.content}
@@ -51,7 +56,6 @@ export default function OrdersScreen({
       >
         <Text style={styles.heading}>Acompanhe suas roupas</Text>
 
-        {/* Botão administrativo exclusivo para lavanderias */}
         {isStore && (
           <TouchableOpacity
             style={styles.adminButton}
@@ -270,7 +274,6 @@ export default function OrdersScreen({
           />
         </View>
 
-        {/* Novo pedido aparece somente para clientes */}
         {!isStore && (
           <TouchableOpacity
             style={styles.newOrder}
