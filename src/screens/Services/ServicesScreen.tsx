@@ -1,5 +1,5 @@
 import type { Navigate } from '../../types';
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Alert,
   Modal,
@@ -15,6 +15,7 @@ import {
 
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../lib/supabase';
 
 type ServiceItem = {
   id: string;
@@ -27,37 +28,24 @@ type ServiceItem = {
 
 type Props = {
   navigate: Navigate;
+  laundryId: string;
 };
 
-const initialServices: ServiceItem[] = [
-  {
-    id: '1',
-    name: 'Lavagem tradicional',
-    description: 'Lavagem e secagem de roupas do dia a dia.',
-    price: 25,
-    deadline: '24 horas',
-    active: true,
-  },
-  {
-    id: '2',
-    name: 'Lavagem expressa',
-    description: 'Lavagem rápida para quem tem urgência.',
-    price: 40,
-    deadline: '6 horas',
-    active: true,
-  },
-  {
-    id: '3',
-    name: 'Passadoria',
-    description: 'Passadoria profissional de peças de roupa.',
-    price: 18,
-    deadline: '48 horas',
-    active: false,
-  },
-];
+export default function ServicesScreen({ navigate, laundryId }: Props) {
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-export default function ServicesScreen({ navigate }: Props) {
-  const [services, setServices] = useState<ServiceItem[]>(initialServices);
+  const loadServices = useCallback(async () => {
+    if (!laundryId) { setLoading(false); return; }
+    setLoading(true);
+    const { data, error } = await supabase.from('laundry_services').select('id, name, description, price, estimated_duration, is_active').eq('laundry_id', laundryId).order('created_at', { ascending: true });
+    if (error) { Alert.alert('Erro ao carregar serviços', error.message); setLoading(false); return; }
+    setServices((data ?? []).map((row) => ({ id: row.id, name: row.name, description: row.description ?? '', price: Number(row.price), deadline: row.estimated_duration ?? '', active: Boolean(row.is_active) })));
+    setLoading(false);
+  }, [laundryId]);
+
+  useEffect(() => { void loadServices(); }, [loadServices]);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -93,91 +81,47 @@ export default function ServicesScreen({ navigate }: Props) {
     setModalVisible(true);
   }
 
-  function saveService() {
+  async function saveService() {
     const numericPrice = Number(price.replace(',', '.'));
+    if (!laundryId) { Alert.alert('Lavanderia não encontrada', 'Entre novamente na conta da lavanderia.'); return; }
+    if (!name.trim()) { Alert.alert('Atenção', 'Informe o nome do serviço.'); return; }
+    if (!price.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) { Alert.alert('Atenção', 'Informe um preço válido.'); return; }
+    if (!deadline.trim()) { Alert.alert('Atenção', 'Informe o prazo estimado.'); return; }
 
-    if (!name.trim()) {
-      Alert.alert('Atenção', 'Informe o nome do serviço.');
-      return;
-    }
-
-    if (!description.trim()) {
-      Alert.alert('Atenção', 'Informe a descrição do serviço.');
-      return;
-    }
-
-    if (!price.trim() || !Number.isFinite(numericPrice) || numericPrice <= 0) {
-      Alert.alert('Atenção', 'Informe um preço válido.');
-      return;
-    }
-
-    if (!deadline.trim()) {
-      Alert.alert('Atenção', 'Informe o prazo estimado.');
-      return;
-    }
-
-    if (editingId) {
-      setServices((current) =>
-        current.map((service) =>
-          service.id === editingId
-            ? {
-                ...service,
-                name: name.trim(),
-                description: description.trim(),
-                price: numericPrice,
-                deadline: deadline.trim(),
-                active,
-              }
-            : service
-        )
-      );
-
-      Alert.alert('Sucesso', 'Serviço atualizado!');
-    } else {
-      const newService: ServiceItem = {
-        id: Date.now().toString(),
-        name: name.trim(),
-        description: description.trim(),
-        price: numericPrice,
-        deadline: deadline.trim(),
-        active,
-      };
-
-      setServices((current) => [newService, ...current]);
-      Alert.alert('Sucesso', 'Serviço cadastrado!');
-    }
-
+    setSaving(true);
+    const payload = { name: name.trim(), description: description.trim(), price: numericPrice, estimated_duration: deadline.trim(), is_active: active, updated_at: new Date().toISOString() };
+    const result = editingId
+      ? await supabase.from('laundry_services').update(payload).eq('id', editingId).eq('laundry_id', laundryId)
+      : await supabase.from('laundry_services').insert({ ...payload, laundry_id: laundryId });
+    setSaving(false);
+    if (result.error) { Alert.alert('Erro ao salvar serviço', result.error.message); return; }
+    await loadServices();
     setModalVisible(false);
+    Alert.alert('Sucesso', editingId ? 'Serviço atualizado!' : 'Serviço cadastrado!');
   }
 
-  function toggleService(id: string) {
-    setServices((current) =>
-      current.map((service) =>
-        service.id === id
-          ? { ...service, active: !service.active }
-          : service
-      )
-    );
+
+  async function toggleService(id: string) {
+    const item = services.find((service) => service.id === id);
+    if (!item) return;
+    const { error } = await supabase.from('laundry_services').update({ is_active: !item.active, updated_at: new Date().toISOString() }).eq('id', id).eq('laundry_id', laundryId);
+    if (error) { Alert.alert('Erro ao atualizar serviço', error.message); return; }
+    setServices((current) => current.map((service) => service.id === id ? { ...service, active: !service.active } : service));
   }
 
   function deleteService(id: string) {
-    Alert.alert(
-      'Excluir serviço',
-      'Tem certeza que deseja excluir este serviço?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Excluir',
-          style: 'destructive',
-          onPress: () => {
-            setServices((current) =>
-              current.filter((service) => service.id !== id)
-            );
-          },
-        },
-      ]
-    );
+    Alert.alert('Excluir serviço', 'Tem certeza que deseja excluir este serviço?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Excluir', style: 'destructive', onPress: () => {
+        void (async () => {
+          const { error } = await supabase.from('laundry_services').delete().eq('id', id).eq('laundry_id', laundryId);
+          if (error) { Alert.alert('Erro ao excluir serviço', error.message); return; }
+          setServices((current) => current.filter((service) => service.id !== id));
+        })();
+      } },
+    ]);
   }
+
 
   const activeCount = services.filter((item) => item.active).length;
 
@@ -248,7 +192,9 @@ export default function ServicesScreen({ navigate }: Props) {
           </View>
         </View>
 
-        {services.length === 0 ? (
+        {loading ? (
+          <View style={styles.emptyState}><Text style={styles.emptyTitle}>Carregando serviços...</Text></View>
+        ) : services.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="file-tray-outline" size={42} color="#AAB3C0" />
             <Text style={styles.emptyTitle}>Nenhum serviço cadastrado</Text>
@@ -453,10 +399,10 @@ export default function ServicesScreen({ navigate }: Props) {
 
               <TouchableOpacity
                 style={styles.saveButton}
-                onPress={saveService}
+                onPress={() => { void saveService(); }}
               >
                 <Text style={styles.saveButtonText}>
-                  {editingId ? 'Salvar alterações' : 'Cadastrar serviço'}
+                  {saving ? 'Salvando...' : editingId ? 'Salvar alterações' : 'Cadastrar serviço'}
                 </Text>
               </TouchableOpacity>
 

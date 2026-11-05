@@ -11,7 +11,7 @@ import Field from '../../components/Field';
 import Header from '../../components/Header';
 import Brand from '../../components/Brand';
 import PrimaryButton from '../../components/PrimaryButton';
-import { services } from '../../data/services';
+import type { ServiceItem } from '../../data/services';
 import { money } from '../../utils/money';
 import type { Navigate, Service, PaymentMethod } from '../../types';
 
@@ -23,7 +23,7 @@ service: Service;
   instructions: string;
   payment: PaymentMethod;
   setPayment: (value: PaymentMethod) => void;
-  selectedService: (typeof services)[number];
+  selectedService: ServiceItem;
   total: number;
   navigate: Navigate;
   confirmOrder: () => void;
@@ -54,7 +54,7 @@ export default function PaymentScreen({ service, date, time, address, instructio
       ))}
       <View style={styles.priceBreakdown}>
         <View style={styles.breakdownRow}><Text style={styles.breakdownLabel}>Serviço · {service}</Text><Text style={styles.breakdownValue}>{money(selectedService.price)}</Text></View>
-        <View style={styles.breakdownRow}><Text style={styles.breakdownLabel}>Coleta e entrega</Text><Text style={styles.breakdownValue}>{money(8.90)}</Text></View>
+        <View style={styles.breakdownRow}><Text style={styles.breakdownLabel}>Coleta e entrega</Text><Text style={styles.breakdownValue}>{money(total - selectedService.price)}</Text></View>
         <View style={styles.cardDivider} />
         <View style={styles.breakdownRow}><Text style={styles.totalLabel}>Total estimado</Text><Text style={styles.totalValue}>{money(total)}</Text></View>
       </View>

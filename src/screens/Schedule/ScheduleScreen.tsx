@@ -21,7 +21,7 @@ import Field from '../../components/Field';
 import Header from '../../components/Header';
 import PrimaryButton from '../../components/PrimaryButton';
 
-import { services } from '../../data/services';
+import type { ServiceItem } from '../../data/services';
 import { money } from '../../utils/money';
 
 import type { Navigate, Service } from '../../types';
@@ -37,7 +37,7 @@ type Props = {
   setDate: (value: string) => void;
   time: string;
   setTime: (value: string) => void;
-  selectedService: (typeof services)[number];
+  selectedService: ServiceItem;
   navigate: Navigate;
   continueToPayment: () => void;
 };
@@ -208,44 +208,19 @@ export default function ScheduleScreen({
 
         {/* SERVIÇO */}
         <Text style={styles.formSectionTitle}>
-          1. Escolha o serviço
+          1. Serviço selecionado
         </Text>
 
-        {services.map(item => (
-          <TouchableOpacity
-            key={item.name}
-            onPress={() => setService(item.name)}
-            style={[
-              styles.optionCard,
-              service === item.name && styles.optionCardSelected,
-            ]}
-          >
-            <View
-              style={[
-                styles.optionRadio,
-                service === item.name && styles.optionRadioSelected,
-              ]}
-            >
-              {service === item.name ? (
-                <View style={styles.radioDot} />
-              ) : null}
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.optionTitle}>
-                {item.name}
-              </Text>
-
-              <Text style={styles.optionDetail}>
-                {item.detail}
-              </Text>
-            </View>
-
-            <Text style={styles.optionPrice}>
-              {money(item.price)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.optionCardSelected}>
+          <View style={styles.optionRadioSelected}>
+            <View style={styles.radioDot} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionTitle}>{selectedService.name}</Text>
+            <Text style={styles.optionDetail}>{selectedService.detail || selectedService.description}</Text>
+          </View>
+          <Text style={styles.optionPrice}>{money(selectedService.price)}</Text>
+        </View>
 
         {/* ENDEREÇO */}
         <Text style={styles.formSectionTitle}>

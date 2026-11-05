@@ -1,47 +1,37 @@
-# LavaJá — aplicativo de lavanderia
+# LavaJá — Expo + Supabase
 
-Projeto React Native com Expo e TypeScript, reorganizado em páginas, componentes e módulos.
+Projeto baseado nas telas originais do LavaJá. O ZIP não contém credenciais.
 
-## Requisitos
-
-- Node.js LTS
-- npm
-- Expo Go no celular (opcional, para testar pelo QR Code)
-
-## Como executar no VS Code
+## Configuração
 
 1. Extraia o ZIP.
-2. Abra a pasta `lavaja-organizado` no VS Code.
-3. Abra o terminal integrado.
-4. Instale as dependências:
+2. Crie um arquivo `.env` na raiz, usando `.env.example` como modelo.
+3. Preencha `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` com os valores do seu projeto Supabase.
+4. Execute:
 
    ```bash
    npm install
+   npx expo start -c
    ```
 
-5. Inicie o Expo:
+## Integrações incluídas nesta versão
 
-   ```bash
-   npx expo start
-   ```
+- Login, cadastro, restauração de sessão e recuperação de senha pelo Supabase Auth.
+- Recuperação/criação do perfil em `profiles`, preenchendo `default_address` porque a coluna é NOT NULL.
+- Criação automática de um registro inicial em `laundries` para uma conta do tipo loja.
+- Consulta de lavanderias ativas para a tela inicial.
+- Criação de pedido em `orders` e tentativa de criação de pagamento pendente em `payments`.
+- Atualização da etapa do pedido em `orders` pelo painel da loja.
+- Gravação de avaliações em `reviews` após a entrega.
 
-6. Leia o QR Code com o Expo Go ou pressione `a` para Android, `i` para iOS ou `w` para web.
+## Importante — escopo e validação
 
-## Organização
+Esta é uma etapa de integração do projeto, não uma declaração de que todos os fluxos foram validados em produção. A edição do perfil e o cadastro/edição/exclusão de serviços ainda precisam ser conectados às respectivas operações Supabase; a consulta de avaliações e a sincronização completa de pagamentos também precisam ser finalizadas. O fluxo de agendamento mantém os campos e telas existentes, mas a data selecionada ainda precisa ser convertida para o formato `YYYY-MM-DD` antes de persistir.
 
-- `App.tsx`: estado global do fluxo e troca de telas.
-- `src/screens/`: uma pasta e um arquivo para cada tela.
-- `src/components/`: componentes reutilizáveis.
-- `src/constants/`: cores e tema.
-- `src/data/`: catálogo de serviços.
-- `src/styles/`: estilos compartilhados.
-- `src/types/`: tipos TypeScript.
-- `src/utils/`: funções auxiliares.
+As políticas RLS informadas foram consideradas nas operações principais. Não desative RLS para fazer o app funcionar. A política de inserção de avaliações contém a condição redundante `o.laundry_id = o.laundry_id`; revise-a no Supabase antes de usar avaliações em produção.
 
-## Telas incluídas
+## Segurança
 
-Login, cadastro, início, agendamento, pagamento e confirmação.
-
-## Observações
-
-Esta é a versão de demonstração original reorganizada. Login, pagamento, pedidos, perfil e notificações continuam sem integração com servidor/backend; o pagamento não realiza cobrança real. Os textos e valores demonstrativos foram preservados.
+- Não compartilhe nem publique seu `.env`.
+- Use somente a chave `anon`/publishable no aplicativo Expo. Nunca coloque a `service_role` no app.
+- Este ZIP exclui `.env`, `node_modules`, `.expo` e metadados Git.

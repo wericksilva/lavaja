@@ -37,6 +37,7 @@ type Props = {
     rating: number,
     comment: string,
   ) => void;
+  onNewOrder: () => void;
 };
 
 export default function OrdersScreen({
@@ -46,6 +47,7 @@ export default function OrdersScreen({
   isStore,
   reviews,
   onSubmitReview,
+  onNewOrder,
 }: Props) {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
   const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
@@ -346,7 +348,7 @@ export default function OrdersScreen({
         {!isStore && (
           <TouchableOpacity
             style={styles.newOrder}
-            onPress={() => navigate('schedule')}
+            onPress={onNewOrder}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -359,8 +361,7 @@ export default function OrdersScreen({
         )}
 
         <Text style={styles.demoNote}>
-          Pedidos ilustrativos para demonstração. O histórico real será
-          conectado ao backend.
+          Seus pedidos são carregados da sua conta no LavaJá.
         </Text>
       </ScrollView>
 

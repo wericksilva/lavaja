@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -14,30 +14,42 @@ import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
 import type { Laundry } from '../../data/laundries';
-import { services } from '../../data/services';
+import type { DbLaundryService } from '../../lib/database';
+import { getLaundryServices } from '../../lib/database';
 import { money } from '../../utils/money';
-import type { Navigate, Service } from '../../types';
+import type { Navigate } from '../../types';
 import type { Review } from '../Orders/OrdersScreen';
 
 type Props = {
   laundry: Laundry;
-  setService: (value: Service) => void;
   navigate: Navigate;
   reviews: Review[];
+  onSelectService: (item: DbLaundryService) => void;
 };
 
 export default function LaundryDetailsScreen({
   laundry,
-  setService,
   navigate,
   reviews,
+  onSelectService,
 }: Props) {
   const [reviewsVisible, setReviewsVisible] = useState(false);
+  const [services, setServices] = useState<DbLaundryService[]>([]);
+  const [loadingServices, setLoadingServices] = useState(true);
+  const [servicesError, setServicesError] = useState('');
 
-  const handleSelectService = (serviceName: Service) => {
-    setService(serviceName);
-    navigate('schedule');
-  };
+  useEffect(() => {
+    let active = true;
+    setLoadingServices(true);
+    setServicesError('');
+    getLaundryServices(laundry.id, true)
+      .then((rows) => { if (active) setServices(rows); })
+      .catch((error: unknown) => { if (active) setServicesError(error instanceof Error ? error.message : 'Não foi possível carregar os serviços.'); })
+      .finally(() => { if (active) setLoadingServices(false); });
+    return () => { active = false; };
+  }, [laundry.id]);
+
+
 
   const averageRating =
     reviews.length > 0
@@ -202,9 +214,15 @@ export default function LaundryDetailsScreen({
               Escolha o serviço que deseja realizar nesta lavanderia.
             </Text>
 
-            {services.map((item) => (
+            {loadingServices ? (
+              <Text style={styles.sectionSubtitle}>Carregando serviços...</Text>
+            ) : servicesError ? (
+              <Text style={styles.sectionSubtitle}>{servicesError}</Text>
+            ) : services.length === 0 ? (
+              <Text style={styles.sectionSubtitle}>Esta lavanderia ainda não cadastrou serviços ativos.</Text>
+            ) : services.map((item) => (
               <View
-                key={item.name}
+                key={item.id}
                 style={styles.serviceCard}
               >
                 <View style={styles.serviceIcon}>
@@ -221,17 +239,17 @@ export default function LaundryDetailsScreen({
                   </Text>
 
                   <Text style={styles.serviceDescription}>
-                    {item.description}
+                    {item.description || item.estimated_duration}
                   </Text>
 
                   <Text style={styles.servicePrice}>
-                    A partir de {money(item.price)}
+                    A partir de {money(Number(item.price))}
                   </Text>
                 </View>
 
                 <TouchableOpacity
                   style={styles.chooseButton}
-                  onPress={() => handleSelectService(item.name)}
+                  onPress={() => { onSelectService(item); navigate('schedule'); }}
                   activeOpacity={0.8}
                 >
                   <Text style={styles.chooseButtonText}>
@@ -406,21 +424,9 @@ export default function LaundryDetailsScreen({
             </Text>
           </View>
 
-          <TouchableOpacity
-            style={styles.mainButton}
-            onPress={() => navigate('schedule')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.mainButtonText}>
-              Agendar nesta lavanderia
-            </Text>
-
-            <Ionicons
-              name="arrow-forward"
-              size={18}
-              color="#FFFFFF"
-            />
-          </TouchableOpacity>
+          <View style={[styles.mainButton, { opacity: 0.85 }]}>
+            <Text style={styles.mainButtonText}>Escolha um serviço acima para continuar</Text>
+          </View>
         </View>
       </View>
     </SafeAreaView>

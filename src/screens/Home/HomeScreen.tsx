@@ -12,8 +12,7 @@ import {
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-import { services } from '../../data/services';
-import { laundries, type Laundry } from '../../data/laundries';
+import type { Laundry } from '../../data/laundries';
 import { money } from '../../utils/money';
 import type { Navigate, Service } from '../../types';
 
@@ -24,6 +23,7 @@ type Props = {
   isStore: boolean;
   selectedLaundry: Laundry | null;
   setSelectedLaundry: (value: Laundry) => void;
+  availableLaundries?: Laundry[];
 };
 
 const weeklyRevenue = [
@@ -43,6 +43,7 @@ export default function HomeScreen({
   isStore,
   selectedLaundry,
   setSelectedLaundry,
+  availableLaundries = [],
 }: Props) {
   const firstName = name.trim().split(' ')[0] || 'Cliente';
   const [showDashboard, setShowDashboard] = useState(false);
@@ -589,7 +590,13 @@ export default function HomeScreen({
               )}
 
               <View style={styles.laundryList}>
-                {laundries.map((laundry) => {
+                {availableLaundries.length === 0 ? (
+                  <View style={styles.emptyLaundryCard}>
+                    <Ionicons name="storefront-outline" size={30} color="#7B8798" />
+                    <Text style={styles.emptyLaundryTitle}>Nenhuma lavanderia disponível</Text>
+                    <Text style={styles.emptyLaundryText}>As lavanderias ativas aparecerão aqui quando cadastrarem seus dados.</Text>
+                  </View>
+                ) : availableLaundries.map((laundry) => {
                   const isSelected =
                     selectedLaundry?.id === laundry.id;
 
@@ -1524,4 +1531,7 @@ stepDescription: {
     color: '#176B87',
     fontWeight: '800',
   },
+  emptyLaundryCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5EAF0', padding: 22, alignItems: 'center', gap: 8 },
+  emptyLaundryTitle: { color: '#263746', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  emptyLaundryText: { color: '#7B8798', fontSize: 12, textAlign: 'center', lineHeight: 18 },
 });
