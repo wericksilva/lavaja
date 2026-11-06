@@ -57,6 +57,7 @@ export default function TrackingScreen({ onBack, order }: Props) {
     : 0;
 
   const isDelivered = currentStep === steps.length - 1;
+  const isCancelled = order.status === 'cancelled';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -87,15 +88,15 @@ export default function TrackingScreen({ onBack, order }: Props) {
             </View>
 
             <View
-              style={isDelivered ? styles.statusDelivered : styles.statusBadge}
+              style={isDelivered ? styles.statusDelivered : isCancelled ? styles.statusCancelled : styles.statusBadge}
             >
               <View
-                style={isDelivered ? styles.statusDotDelivered : styles.statusDot}
+                style={isDelivered ? styles.statusDotDelivered : isCancelled ? styles.statusDotCancelled : styles.statusDot}
               />
               <Text
-                style={isDelivered ? styles.statusTextDelivered : styles.statusText}
+                style={isDelivered ? styles.statusTextDelivered : isCancelled ? styles.statusTextCancelled : styles.statusText}
                 >
-                {isDelivered ? 'Pedido entregue' : 'Em andamento'}
+                {isCancelled ? 'Pedido cancelado' : isDelivered ? 'Pedido entregue' : 'Em andamento'}
               </Text>
             </View>
           </View>
@@ -115,6 +116,13 @@ export default function TrackingScreen({ onBack, order }: Props) {
           </View>
         </View>
 
+        {isCancelled ? (
+          <View style={styles.cancelledCard}>
+            <Ionicons name="close-circle" size={34} color="#B42318" />
+            <Text style={styles.cancelledTitle}>Este pedido foi cancelado</Text>
+            <Text style={styles.cancelledText}>O acompanhamento deste pedido foi encerrado após o cancelamento.</Text>
+          </View>
+        ) : <>
         <View style={styles.progressCard}>
           <View style={styles.progressHeader}>
             <View>
@@ -228,10 +236,8 @@ export default function TrackingScreen({ onBack, order }: Props) {
           </View>
         </View>
 
-        <Text style={styles.demoNote}>
-            Acompanhamento demonstrativo. As atualizações são feitas pelo painel
-          administrativo enquanto o aplicativo estiver aberto.
-        </Text>
+        <Text style={styles.demoNote}>As etapas são atualizadas pela lavanderia e salvas no Supabase.</Text>
+        </>}
       </ScrollView>
     </SafeAreaView>
   );
@@ -295,6 +301,12 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     marginTop: 3,
     },
+  statusCancelled: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FEE4E2', paddingHorizontal: 9, paddingVertical: 7, borderRadius: 20 },
+  statusDotCancelled: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#B42318', marginRight: 6 },
+  statusTextCancelled: { color: '#B42318', fontSize: 10, fontWeight: '800' },
+  cancelledCard: { backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#F3C6C4', borderRadius: 17, padding: 22, alignItems: 'center', marginBottom: 16 },
+  cancelledTitle: { color: '#B42318', fontSize: 16, fontWeight: '800', marginTop: 10 },
+  cancelledText: { color: C.muted, fontSize: 12, lineHeight: 18, textAlign: 'center', marginTop: 8 },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',

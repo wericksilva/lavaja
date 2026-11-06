@@ -9,6 +9,7 @@ import {
   Modal,
   TextInput,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import type { LaundryOrder } from '../../types/order';
 
 export type Review = {
   orderId: string;
+  laundryId?: string;
   rating: number;
   comment: string;
   createdAt: string;
@@ -36,7 +38,11 @@ type Props = {
     orderId: string,
     rating: number,
     comment: string,
-  ) => void;
+  ) => Promise<boolean>;
+  onNewOrder: () => void;
+  onRefreshOrders: () => Promise<void>;
+  onOpenChat: (orderId: string) => void;
+  onCancelOrder: (orderId: string) => Promise<void>;
 };
 
 export default function OrdersScreen({
@@ -46,11 +52,17 @@ export default function OrdersScreen({
   isStore,
   reviews,
   onSubmitReview,
+  onNewOrder,
+  onRefreshOrders,
+  onOpenChat,
+  onCancelOrder,
 }: Props) {
   const [expandedOrders, setExpandedOrders] = useState<string[]>([]);
   const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const openReview = (orderId: string) => {
     setReviewOrderId(orderId);
@@ -64,8 +76,8 @@ export default function OrdersScreen({
     setReviewComment('');
   };
 
-  const submitCurrentReview = () => {
-    if (!reviewOrderId) return;
+  const submitCurrentReview = async () => {
+    if (!reviewOrderId || submittingReview) return;
 
     if (reviewRating === 0) {
       Alert.alert(
@@ -75,14 +87,17 @@ export default function OrdersScreen({
       return;
     }
 
-    onSubmitReview(
-      reviewOrderId,
-      reviewRating,
-      reviewComment.trim(),
-    );
-
-    closeReview();
-    Alert.alert('Obrigado!', 'Sua avaliação foi registrada.');
+    try {
+      setSubmittingReview(true);
+      const saved = await onSubmitReview(
+        reviewOrderId,
+        reviewRating,
+        reviewComment.trim(),
+      );
+      if (saved) closeReview();
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const toggleDetails = (id: string) => {
@@ -126,6 +141,24 @@ export default function OrdersScreen({
           Veja o andamento e o histórico dos seus pedidos.
         </Text>
 
+        <TouchableOpacity
+          style={styles.refreshButton}
+          activeOpacity={0.75}
+          disabled={refreshing}
+          onPress={async () => {
+            if (refreshing) return;
+            setRefreshing(true);
+            try {
+              await onRefreshOrders();
+            } finally {
+              setRefreshing(false);
+            }
+          }}
+        >
+          {refreshing ? <ActivityIndicator size="small" color={C.blue} /> : <Ionicons name="refresh-outline" size={18} color={C.blue} />}
+          <Text style={styles.refreshButtonText}>{refreshing ? 'Atualizando...' : 'Atualizar pedidos'}</Text>
+        </TouchableOpacity>
+
         {orders.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="receipt-outline" size={42} color={C.muted} />
@@ -139,6 +172,7 @@ export default function OrdersScreen({
         ) : (
           orders.map((order) => {
             const isCompleted = order.currentStep === 5;
+            const isCancelled = order.status === 'cancelled';
             const isExpanded = expandedOrders.includes(order.id);
 
             const existingReview = reviews.find(
@@ -189,7 +223,7 @@ export default function OrdersScreen({
                           : styles.statusTextActive,
                       ]}
                     >
-                      {isCompleted ? 'Concluído' : 'Em andamento'}
+                      {isCancelled ? 'Cancelado' : ['Aguardando', 'Coleta agendada', 'Coletado', 'Em lavagem', 'Pronto', 'Entregue'][Math.max(0, Math.min(5, order.currentStep))]}
                     </Text>
                   </View>
                 </View>
@@ -256,6 +290,9 @@ export default function OrdersScreen({
                             value={order.payment}
                           />
                         ) : null}
+                        {order.paymentStatus ? (
+                          <DetailRow icon="shield-checkmark-outline" label="Situação do pagamento" value={order.paymentStatus === 'paid' ? 'Pago' : order.paymentStatus === 'refunded' ? 'Estornado' : order.paymentStatus === 'failed' ? 'Não aprovado' : 'Aguardando confirmação'} />
+                        ) : null}
 
                         {order.instructions ? (
                           <DetailRow
@@ -272,17 +309,13 @@ export default function OrdersScreen({
                 <View style={styles.cardBottom}>
                   <View style={styles.description}>
                     <Ionicons
-                      name={
-                        isCompleted
-                          ? 'checkmark-circle-outline'
-                          : 'sync-outline'
-                      }
+                      name={isCancelled ? 'close-circle-outline' : isCompleted ? 'checkmark-circle-outline' : 'sync-outline'}
                       size={17}
-                      color={isCompleted ? C.green : C.blue}
+                      color={isCancelled ? '#B42318' : isCompleted ? C.green : C.blue}
                     />
 
                     <Text style={styles.descriptionText}>
-                      {isCompleted
+                      {isCancelled ? 'Este pedido foi cancelado.' : isCompleted
                         ? 'Pedido entregue com sucesso.'
                         : 'Suas roupas estão sendo cuidadas.'}
                     </Text>
@@ -302,6 +335,19 @@ export default function OrdersScreen({
                       color={C.blue}
                     />
                   </TouchableOpacity>
+                </View>
+
+                <View style={styles.orderActions}>
+                  <TouchableOpacity style={styles.chatButton} onPress={() => onOpenChat(order.id)} activeOpacity={0.8}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={17} color={C.blue} />
+                    <Text style={styles.chatButtonText}>Conversar com a lavanderia</Text>
+                  </TouchableOpacity>
+                  {!isCompleted && order.currentStep <= (isStore ? 2 : 1) && (order as typeof order & { status?: string }).status !== 'cancelled' && (
+                    <TouchableOpacity style={styles.cancelButton} onPress={() => onCancelOrder(order.id)} activeOpacity={0.8}>
+                      <Ionicons name="close-circle-outline" size={17} color="#B42318" />
+                      <Text style={styles.cancelButtonText}>Cancelar pedido</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
 
                 {isCompleted && !isStore && (
@@ -346,7 +392,7 @@ export default function OrdersScreen({
         {!isStore && (
           <TouchableOpacity
             style={styles.newOrder}
-            onPress={() => navigate('schedule')}
+            onPress={onNewOrder}
             activeOpacity={0.8}
           >
             <Ionicons
@@ -359,8 +405,7 @@ export default function OrdersScreen({
         )}
 
         <Text style={styles.demoNote}>
-          Pedidos ilustrativos para demonstração. O histórico real será
-          conectado ao backend.
+          Seus pedidos são carregados da sua conta no LavaJá.
         </Text>
       </ScrollView>
 
@@ -423,12 +468,13 @@ export default function OrdersScreen({
             />
 
             <TouchableOpacity
-              style={styles.submitReview}
+              style={[styles.submitReview, submittingReview && { opacity: 0.6 }]}
               onPress={submitCurrentReview}
+              disabled={submittingReview}
               activeOpacity={0.8}
             >
               <Text style={styles.submitReviewText}>
-                Enviar avaliação
+                {submittingReview ? 'Salvando avaliação...' : 'Enviar avaliação'}
               </Text>
             </TouchableOpacity>
 
@@ -563,6 +609,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
   },
+  refreshButton: {
+    alignSelf: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginBottom: 12,
+    borderRadius: 12,
+    backgroundColor: C.paleBlue,
+  },
+  refreshButtonText: { color: C.blue, fontSize: 12, fontWeight: '800' },
   status: {
     paddingHorizontal: 9,
     paddingVertical: 6,
@@ -832,6 +890,13 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
+  orderActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 9, marginTop: 12 },
+  payButton: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: C.blue, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9 },
+  payButtonText: { color: C.white, fontSize: 11, fontWeight: '800' },
+  chatButton: { flexDirection: 'row', alignItems: 'center', gap: 7, borderWidth: 1, borderColor: C.line, borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9 },
+  chatButtonText: { color: C.blue, fontSize: 11, fontWeight: '800' },
+  cancelButton: { flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#F3C6C4', borderRadius: 11, paddingHorizontal: 11, paddingVertical: 9 },
+  cancelButtonText: { color: '#B42318', fontSize: 11, fontWeight: '800' },
   bottomNav: {
     flexDirection: 'row',
     backgroundColor: C.white,

@@ -21,6 +21,7 @@ type Props = {
   onChangeOrder: (id: string) => void;
   onBack: () => void;
   onServices: () => void;
+  onReports: () => void;
 };
 
 const steps = [
@@ -48,12 +49,13 @@ export default function AdminScreen({
   onChangeOrder,
   onBack,
   onServices,
+  onReports,
 }: Props) {
   const activeOrders = orders.filter(
-    (order) => getValidStep(order.currentStep) < steps.length - 1,
+    (order) => getValidStep(order.currentStep) < steps.length - 1 && order.status !== 'cancelled',
   ).length;
 
-  const deliveredOrders = orders.length - activeOrders;
+  const deliveredOrders = orders.filter((order) => getValidStep(order.currentStep) === steps.length - 1).length;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -127,6 +129,12 @@ export default function AdminScreen({
           />
         </TouchableOpacity>
 
+        <TouchableOpacity style={styles.servicesCard} activeOpacity={0.85} onPress={onReports}>
+          <View style={styles.servicesIcon}><Ionicons name="bar-chart-outline" size={24} color={C.blue}/></View>
+          <View style={styles.servicesInfo}><Text style={styles.servicesTitle}>Relatórios financeiros e desempenho</Text><Text style={styles.servicesDescription}>Faturamento, pedidos entregues, cancelamentos e serviços mais solicitados.</Text></View>
+          <Ionicons name="chevron-forward" size={21} color={C.blue}/>
+        </TouchableOpacity>
+
         <Text style={styles.sectionTitle}>Pedidos recebidos</Text>
 
         {orders.length === 0 ? (
@@ -153,6 +161,7 @@ export default function AdminScreen({
             const currentStep = getValidStep(order.currentStep);
             const status = steps[currentStep];
             const isDelivered = currentStep === steps.length - 1;
+            const isCancelled = order.status === 'cancelled';
 
             return (
               <View key={order.id} style={styles.card}>
@@ -180,7 +189,7 @@ export default function AdminScreen({
                       styles.badge,
                       isDelivered
                         ? styles.badgeDone
-                        : styles.badgeActive,
+                        : isCancelled ? styles.badgeCancelled : styles.badgeActive,
                     ]}
                   >
                     <Text
@@ -188,10 +197,10 @@ export default function AdminScreen({
                         styles.badgeText,
                         isDelivered
                           ? styles.badgeTextDone
-                          : styles.badgeTextActive,
+                          : isCancelled ? styles.badgeTextCancelled : styles.badgeTextActive,
                       ]}
                     >
-                      {isDelivered ? 'Entregue' : 'Em andamento'}
+                      {isCancelled ? 'Cancelado' : isDelivered ? 'Entregue' : 'Em andamento'}
                     </Text>
                   </View>
                 </View>
@@ -427,6 +436,8 @@ const styles = StyleSheet.create({
   badgeActive: {
     backgroundColor: C.paleBlue,
   },
+  badgeCancelled: { backgroundColor: '#FDECEC' },
+  badgeTextCancelled: { color: '#B42318' },
   badgeDone: {
     backgroundColor: '#E7F7F1',
   },

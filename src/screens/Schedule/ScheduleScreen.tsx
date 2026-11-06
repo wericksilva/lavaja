@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import {
   SafeAreaView,
@@ -9,6 +9,8 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Modal,
+  StyleSheet,
 } from 'react-native';
 
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
@@ -21,8 +23,9 @@ import Field from '../../components/Field';
 import Header from '../../components/Header';
 import PrimaryButton from '../../components/PrimaryButton';
 
-import { services } from '../../data/services';
+import type { ServiceItem } from '../../data/services';
 import { money } from '../../utils/money';
+import { formatDatePtBr, getTodayISODate } from '../../utils/date';
 
 import type { Navigate, Service } from '../../types';
 
@@ -37,7 +40,7 @@ type Props = {
   setDate: (value: string) => void;
   time: string;
   setTime: (value: string) => void;
-  selectedService: (typeof services)[number];
+  selectedService: ServiceItem;
   navigate: Navigate;
   continueToPayment: () => void;
 };
@@ -68,6 +71,69 @@ export default function ScheduleScreen({
   const [erroNumero, setErroNumero] = useState('');
   const [erroData, setErroData] = useState('');
   const [erroHorario, setErroHorario] = useState('');
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [timePickerVisible, setTimePickerVisible] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const selected = /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? new Date(`${date}T12:00:00`)
+      : new Date();
+    return new Date(selected.getFullYear(), selected.getMonth(), 1);
+  });
+  const [timeDraft, setTimeDraft] = useState(time);
+  const [timeDraftError, setTimeDraftError] = useState('');
+
+  const todayISO = getTodayISODate();
+  const calendarYear = calendarMonth.getFullYear();
+  const calendarMonthIndex = calendarMonth.getMonth();
+  const firstWeekday = new Date(calendarYear, calendarMonthIndex, 1).getDay();
+  const daysInMonth = new Date(calendarYear, calendarMonthIndex + 1, 0).getDate();
+  const calendarCells = useMemo(
+    () => [
+      ...Array.from({ length: firstWeekday }, () => null),
+      ...Array.from({ length: daysInMonth }, (_, index) => index + 1),
+    ],
+    [firstWeekday, daysInMonth],
+  );
+
+  const openDatePicker = () => {
+    const selected = /^\d{4}-\d{2}-\d{2}$/.test(date)
+      ? new Date(`${date}T12:00:00`)
+      : new Date();
+    setCalendarMonth(new Date(selected.getFullYear(), selected.getMonth(), 1));
+    setDatePickerVisible(true);
+  };
+
+  const openTimePicker = () => {
+    setTimeDraft(time || '14:00');
+    setTimeDraftError('');
+    setTimePickerVisible(true);
+  };
+
+  const changeTimeDraft = (value: string) => {
+    const digits = value.replace(/\D/g, '').slice(0, 4);
+    const formatted = digits.length > 2
+      ? `${digits.slice(0, 2)}:${digits.slice(2)}`
+      : digits;
+    setTimeDraft(formatted);
+    setTimeDraftError('');
+  };
+
+  const confirmTime = () => {
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(timeDraft)) {
+      setTimeDraftError('Informe um horário válido entre 00:00 e 23:59.');
+      return;
+    }
+    if (date === todayISO) {
+      const selectedDateTime = new Date(`${date}T${timeDraft}:00`);
+      if (selectedDateTime.getTime() <= Date.now()) {
+        setTimeDraftError('Escolha um horário futuro para a coleta.');
+        return;
+      }
+    }
+    setTime(timeDraft);
+    setErroHorario('');
+    setTimePickerVisible(false);
+  };
 
   // CONSULTAR CEP
   const buscarCep = async (valor: string) => {
@@ -159,7 +225,15 @@ export default function ScheduleScreen({
     }
 
     if (!time) {
-      setErroHorario('Selecione uma janela de horário.');
+      setErroHorario('Selecione um horário para a coleta.');
+      valido = false;
+    } else if (date === todayISO && new Date(`${date}T${time}:00`).getTime() <= Date.now()) {
+      setErroHorario('O horário escolhido já passou. Selecione um horário futuro.');
+      valido = false;
+    }
+
+    if (date && date < todayISO) {
+      setErroData('A data da coleta não pode estar no passado.');
       valido = false;
     }
 
@@ -208,44 +282,19 @@ export default function ScheduleScreen({
 
         {/* SERVIÇO */}
         <Text style={styles.formSectionTitle}>
-          1. Escolha o serviço
+          1. Serviço selecionado
         </Text>
 
-        {services.map(item => (
-          <TouchableOpacity
-            key={item.name}
-            onPress={() => setService(item.name)}
-            style={[
-              styles.optionCard,
-              service === item.name && styles.optionCardSelected,
-            ]}
-          >
-            <View
-              style={[
-                styles.optionRadio,
-                service === item.name && styles.optionRadioSelected,
-              ]}
-            >
-              {service === item.name ? (
-                <View style={styles.radioDot} />
-              ) : null}
-            </View>
-
-            <View style={{ flex: 1 }}>
-              <Text style={styles.optionTitle}>
-                {item.name}
-              </Text>
-
-              <Text style={styles.optionDetail}>
-                {item.detail}
-              </Text>
-            </View>
-
-            <Text style={styles.optionPrice}>
-              {money(item.price)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        <View style={styles.optionCardSelected}>
+          <View style={styles.optionRadioSelected}>
+            <View style={styles.radioDot} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.optionTitle}>{selectedService.name}</Text>
+            <Text style={styles.optionDetail}>{selectedService.detail || selectedService.description}</Text>
+          </View>
+          <Text style={styles.optionPrice}>{money(selectedService.price)}</Text>
+        </View>
 
         {/* ENDEREÇO */}
         <Text style={styles.formSectionTitle}>
@@ -372,75 +421,178 @@ export default function ScheduleScreen({
           3. Quando podemos buscar?
         </Text>
 
-        <Text style={styles.fieldLabel}>
-          Dia da coleta
-        </Text>
-
-        <View style={styles.chipRow}>
-          {['Hoje, 29 out.', 'Amanhã, 30 out.', 'Sáb., 31 out.'].map(d => (
-            <TouchableOpacity
-              key={d}
-              onPress={() => {
-                setDate(d);
-                setErroData('');
-              }}
-              style={[
-                styles.chip,
-                date === d && styles.chipSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  date === d && styles.chipTextSelected,
-                ]}
-              >
-                {d}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={styles.fieldLabel}>Dia da coleta</Text>
+        <TouchableOpacity
+          style={pickerStyles.selectionButton}
+          onPress={openDatePicker}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="calendar-outline" size={21} color={C.blue} />
+          <View style={pickerStyles.selectionTextWrap}>
+            <Text style={pickerStyles.selectionLabel}>Data escolhida</Text>
+            <Text style={pickerStyles.selectionValue}>
+              {date ? formatDatePtBr(date) : 'Selecione o dia'}
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={19} color={C.muted} />
+        </TouchableOpacity>
 
         {erroData ? (
-          <Text style={validationStyles.error}>
-            {erroData}
-          </Text>
+          <Text style={validationStyles.error}>{erroData}</Text>
         ) : null}
 
-        <Text style={[styles.fieldLabel, { marginTop: 16 }]}>
-          Janela de horário
-        </Text>
-
-        <View style={styles.chipRow}>
-          {['10h–12h', '14h–16h', '18h–20h'].map(t => (
-            <TouchableOpacity
-              key={t}
-              onPress={() => {
-                setTime(t);
-                setErroHorario('');
-              }}
-              style={[
-                styles.timeChip,
-                time === t && styles.chipSelected,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.chipText,
-                  time === t && styles.chipTextSelected,
-                ]}
-              >
-                {t}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <Text style={[styles.fieldLabel, { marginTop: 16 }]}>Horário da coleta</Text>
+        <TouchableOpacity
+          style={pickerStyles.selectionButton}
+          onPress={openTimePicker}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="time-outline" size={21} color={C.blue} />
+          <View style={pickerStyles.selectionTextWrap}>
+            <Text style={pickerStyles.selectionLabel}>Horário escolhido</Text>
+            <Text style={pickerStyles.selectionValue}>{time || 'Selecione o horário'}</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={19} color={C.muted} />
+        </TouchableOpacity>
 
         {erroHorario ? (
-          <Text style={validationStyles.error}>
-            {erroHorario}
-          </Text>
+          <Text style={validationStyles.error}>{erroHorario}</Text>
         ) : null}
+
+        {/* CALENDÁRIO PERSONALIZADO */}
+        <Modal
+          visible={datePickerVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setDatePickerVisible(false)}
+        >
+          <View style={pickerStyles.overlay}>
+            <View style={pickerStyles.modal}>
+              <View style={pickerStyles.modalHeader}>
+                <View>
+                  <Text style={pickerStyles.modalTitle}>Escolha a data</Text>
+                  <Text style={pickerStyles.modalSubtitle}>Você pode agendar a partir de hoje.</Text>
+                </View>
+                <TouchableOpacity onPress={() => setDatePickerVisible(false)}>
+                  <Ionicons name="close" size={24} color={C.muted} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={pickerStyles.monthHeader}>
+                <TouchableOpacity
+                  disabled={calendarYear === new Date().getFullYear() && calendarMonthIndex === new Date().getMonth()}
+                  onPress={() => setCalendarMonth(new Date(calendarYear, calendarMonthIndex - 1, 1))}
+                  style={pickerStyles.monthArrow}
+                >
+                  <Ionicons name="chevron-back" size={20} color={C.blue} />
+                </TouchableOpacity>
+                <Text style={pickerStyles.monthTitle}>
+                  {calendarMonth.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => setCalendarMonth(new Date(calendarYear, calendarMonthIndex + 1, 1))}
+                  style={pickerStyles.monthArrow}
+                >
+                  <Ionicons name="chevron-forward" size={20} color={C.blue} />
+                </TouchableOpacity>
+              </View>
+
+              <View style={pickerStyles.calendarGrid}>
+                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                  <View key={day} style={pickerStyles.calendarCell}>
+                    <Text style={pickerStyles.weekday}>{day}</Text>
+                  </View>
+                ))}
+                {calendarCells.map((day, index) => {
+                  if (day === null) {
+                    return <View key={`empty-${index}`} style={pickerStyles.calendarCell} />;
+                  }
+                  const month = String(calendarMonthIndex + 1).padStart(2, '0');
+                  const dayText = String(day).padStart(2, '0');
+                  const isoDate = `${calendarYear}-${month}-${dayText}`;
+                  const disabled = isoDate < todayISO;
+                  const selected = date === isoDate;
+                  return (
+                    <TouchableOpacity
+                      key={isoDate}
+                      disabled={disabled}
+                      onPress={() => {
+                        setDate(isoDate);
+                        setErroData('');
+                        setDatePickerVisible(false);
+                      }}
+                      style={[
+                        pickerStyles.calendarCell,
+                        pickerStyles.dayCell,
+                        selected && pickerStyles.dayCellSelected,
+                        disabled && pickerStyles.dayCellDisabled,
+                      ]}
+                    >
+                      <Text style={[
+                        pickerStyles.dayText,
+                        selected && pickerStyles.dayTextSelected,
+                        disabled && pickerStyles.dayTextDisabled,
+                      ]}>{day}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <TouchableOpacity
+                style={pickerStyles.modalCancel}
+                onPress={() => setDatePickerVisible(false)}
+              >
+                <Text style={pickerStyles.modalCancelText}>Fechar calendário</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* HORÁRIO LIVRE */}
+        <Modal
+          visible={timePickerVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setTimePickerVisible(false)}
+        >
+          <View style={pickerStyles.overlay}>
+            <View style={pickerStyles.modal}>
+              <View style={pickerStyles.modalHeader}>
+                <View>
+                  <Text style={pickerStyles.modalTitle}>Escolha o horário</Text>
+                  <Text style={pickerStyles.modalSubtitle}>Digite o horário que prefere para a coleta.</Text>
+                </View>
+                <TouchableOpacity onPress={() => setTimePickerVisible(false)}>
+                  <Ionicons name="close" size={24} color={C.muted} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={pickerStyles.timeLabel}>Horário (24 horas)</Text>
+              <TextInput
+                value={timeDraft}
+                onChangeText={changeTimeDraft}
+                placeholder="Ex.: 09:30"
+                keyboardType="numeric"
+                maxLength={5}
+                style={pickerStyles.timeInput}
+                placeholderTextColor={C.muted}
+              />
+              {timeDraftError ? (
+                <Text style={validationStyles.error}>{timeDraftError}</Text>
+              ) : null}
+
+              <TouchableOpacity style={pickerStyles.confirmButton} onPress={confirmTime}>
+                <Text style={pickerStyles.confirmButtonText}>Confirmar horário</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={pickerStyles.modalCancel}
+                onPress={() => setTimePickerVisible(false)}
+              >
+                <Text style={pickerStyles.modalCancelText}>Cancelar</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* RESUMO */}
         <View style={styles.priceSummary}>
@@ -461,7 +613,7 @@ export default function ScheduleScreen({
 
         {/* CONTINUAR */}
         <PrimaryButton
-          title="Continuar para pagamento"
+          title="Revisar pedido"
           onPress={continuar}
           icon="arrow-forward"
         />
@@ -474,6 +626,60 @@ export default function ScheduleScreen({
     </SafeAreaView>
   );
 }
+
+const pickerStyles = StyleSheet.create({
+  selectionButton: {
+    minHeight: 64,
+    backgroundColor: C.white,
+    borderWidth: 1,
+    borderColor: C.line,
+    borderRadius: 13,
+    paddingHorizontal: 15,
+    paddingVertical: 11,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
+  selectionTextWrap: { flex: 1 },
+  selectionLabel: { color: C.muted, fontSize: 11, marginBottom: 4 },
+  selectionValue: { color: C.navy, fontSize: 14, fontWeight: '800', textTransform: 'capitalize' },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.48)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 18,
+  },
+  modal: {
+    width: '100%',
+    maxWidth: 430,
+    backgroundColor: C.white,
+    borderRadius: 20,
+    padding: 20,
+  },
+  modalHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 },
+  modalTitle: { color: C.navy, fontSize: 19, fontWeight: '900' },
+  modalSubtitle: { color: C.muted, fontSize: 12, lineHeight: 18, marginTop: 5, maxWidth: 290 },
+  monthHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 20, marginBottom: 12 },
+  monthArrow: { width: 36, height: 36, borderRadius: 10, backgroundColor: C.paleBlue, alignItems: 'center', justifyContent: 'center' },
+  monthTitle: { color: C.navy, fontSize: 15, fontWeight: '800', textTransform: 'capitalize' },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  calendarCell: { width: '14.2857%', height: 40, alignItems: 'center', justifyContent: 'center' },
+  weekday: { color: C.muted, fontSize: 11, fontWeight: '700' },
+  dayCell: { borderRadius: 11 },
+  dayCellSelected: { backgroundColor: C.blue },
+  dayCellDisabled: { opacity: 0.3 },
+  dayText: { color: C.navy, fontSize: 13, fontWeight: '600' },
+  dayTextSelected: { color: C.white, fontWeight: '900' },
+  dayTextDisabled: { color: C.muted },
+  modalCancel: { alignItems: 'center', paddingVertical: 13, marginTop: 5 },
+  modalCancelText: { color: C.muted, fontSize: 13, fontWeight: '700' },
+  timeLabel: { color: C.navy, fontSize: 12, fontWeight: '800', marginTop: 24, marginBottom: 8 },
+  timeInput: { height: 58, borderWidth: 1, borderColor: C.line, borderRadius: 13, paddingHorizontal: 16, color: C.navy, fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  confirmButton: { backgroundColor: C.blue, borderRadius: 12, paddingVertical: 15, alignItems: 'center', marginTop: 18 },
+  confirmButtonText: { color: C.white, fontSize: 13, fontWeight: '900' },
+});
 
 const validationStyles = {
   error: {

@@ -12,10 +12,27 @@ import {
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
-import { services } from '../../data/services';
-import { laundries, type Laundry } from '../../data/laundries';
+import type { Laundry } from '../../data/laundries';
 import { money } from '../../utils/money';
 import type { Navigate, Service } from '../../types';
+
+export type DashboardData = {
+  receivedToday: number;
+  pending: number;
+  inProgress: number;
+  completedMonth: number;
+  ordersValueMonth: number;
+  weeklyRevenue: { day: string; value: number }[];
+};
+
+const EMPTY_DASHBOARD: DashboardData = {
+  receivedToday: 0,
+  pending: 0,
+  inProgress: 0,
+  completedMonth: 0,
+  ordersValueMonth: 0,
+  weeklyRevenue: [],
+};
 
 type Props = {
   name: string;
@@ -24,17 +41,12 @@ type Props = {
   isStore: boolean;
   selectedLaundry: Laundry | null;
   setSelectedLaundry: (value: Laundry) => void;
+  availableLaundries?: Laundry[];
+  dashboardData?: DashboardData;
+  dashboardLoading?: boolean;
+  onRefreshDashboard?: () => void;
+  unreadNotifications?: number;
 };
-
-const weeklyRevenue = [
-  { day: 'Seg', value: 180 },
-  { day: 'Ter', value: 250 },
-  { day: 'Qua', value: 210 },
-  { day: 'Qui', value: 320 },
-  { day: 'Sex', value: 280 },
-  { day: 'Sáb', value: 420 },
-  { day: 'Dom', value: 150 },
-];
 
 export default function HomeScreen({
   name,
@@ -43,6 +55,11 @@ export default function HomeScreen({
   isStore,
   selectedLaundry,
   setSelectedLaundry,
+  availableLaundries = [],
+  dashboardData = EMPTY_DASHBOARD,
+  dashboardLoading = false,
+  onRefreshDashboard = () => {},
+  unreadNotifications = 0,
 }: Props) {
   const firstName = name.trim().split(' ')[0] || 'Cliente';
   const [showDashboard, setShowDashboard] = useState(false);
@@ -63,12 +80,13 @@ export default function HomeScreen({
     navigate('schedule');
   };
 
-  const maxRevenue = Math.max(...weeklyRevenue.map((item) => item.value));
+  const weeklyRevenue = dashboardData.weeklyRevenue;
+  const maxRevenue = Math.max(1, ...weeklyRevenue.map((item) => item.value));
 
   const dashboardStats = [
     {
       title: 'Recebidos hoje',
-      value: '12',
+      value: String(dashboardData.receivedToday),
       icon: 'today-outline' as const,
       color: '#176B87',
       background: '#E8F3F6',
@@ -76,7 +94,7 @@ export default function HomeScreen({
     },
     {
       title: 'Aguardando aprovação',
-      value: '4',
+      value: String(dashboardData.pending),
       icon: 'time-outline' as const,
       color: '#D99120',
       background: '#FFF5E3',
@@ -84,7 +102,7 @@ export default function HomeScreen({
     },
     {
       title: 'Em andamento',
-      value: '8',
+      value: String(dashboardData.inProgress),
       icon: 'sync-outline' as const,
       color: '#3976C5',
       background: '#EAF2FF',
@@ -92,7 +110,7 @@ export default function HomeScreen({
     },
     {
       title: 'Concluídos',
-      value: '26',
+      value: String(dashboardData.completedMonth),
       icon: 'checkmark-circle-outline' as const,
        color: '#16865B',
       background: '#E7F7F1',
@@ -139,17 +157,29 @@ export default function HomeScreen({
               </Text>
             </View>
 
-            <TouchableOpacity
-              style={styles.profileButton}
-              onPress={() => navigate('profile')}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="person-outline"
-                size={23}
-                color="#176B87"
-              />
-            </TouchableOpacity>
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                style={styles.notificationButton}
+                onPress={() => navigate('notifications')}
+                activeOpacity={0.8}
+                accessibilityRole="button"
+                accessibilityLabel="Abrir notificações"
+              >
+                <Ionicons name="notifications-outline" size={23} color="#176B87" />
+                {unreadNotifications > 0 && (
+                  <View style={styles.notificationBadge}>
+                    <Text style={styles.notificationBadgeText}>{unreadNotifications > 9 ? '9+' : unreadNotifications}</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.profileButton}
+                onPress={() => navigate('profile')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-outline" size={23} color="#176B87" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {isStore ? (
@@ -168,13 +198,20 @@ export default function HomeScreen({
                       </Text>
                     </View>
 
-                    <View style={styles.dashboardHeaderIcon}>
-                       <Ionicons
-                        name="analytics-outline"
+                    <TouchableOpacity
+                      style={styles.dashboardHeaderIcon}
+                      onPress={onRefreshDashboard}
+                      disabled={dashboardLoading}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel="Atualizar dados do dashboard"
+                    >
+                      <Ionicons
+                        name={dashboardLoading ? "hourglass-outline" : "refresh-outline"}
                         size={25}
                         color="#176B87"
                       />
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
                   {/* FATURAMENTO */}
@@ -182,11 +219,11 @@ export default function HomeScreen({
                     <View style={styles.revenueTop}>
                       <View>
                         <Text style={styles.revenueLabel}>
-                          Faturamento do mês
+                          Valor dos pedidos no mês
                         </Text>
 
                         <Text style={styles.revenueValue}>
-                          R$ 8.450,00
+                          {money(dashboardData.ordersValueMonth)}
                         </Text>
                       </View>
 
@@ -207,7 +244,7 @@ export default function HomeScreen({
                       />
 
                       <Text style={styles.revenueFooterText}>
-                        +12,5% em relação ao mês anterior
+                        Soma dos pedidos não cancelados neste mês
                       </Text>
                     </View>
                   </View>
@@ -253,7 +290,7 @@ export default function HomeScreen({
                     <View style={styles.chartHeader}>
                       <View>
                         <Text style={styles.chartTitle}>
-                          Faturamento semanal
+                          Valor dos pedidos na semana
                         </Text>
 
                         <Text style={styles.chartSubtitle}>
@@ -274,7 +311,7 @@ export default function HomeScreen({
                       {weeklyRevenue.map((item) => (
                         <View key={item.day} style={styles.chartColumn}>
                           <Text style={styles.chartBarValue}>
-                            {item.value}
+                            {Math.round(item.value)}
                           </Text>
 
                           <View style={styles.chartBarBackground}>
@@ -298,7 +335,7 @@ export default function HomeScreen({
                     <View style={styles.chartLegend}>
                       <View style={styles.chartLegendDot} />
                       <Text style={styles.chartLegendText}>
-                        Faturamento diário em reais
+                        Valor dos pedidos por dia (R$)
                       </Text>
                     </View>
                   </View>
@@ -315,7 +352,7 @@ export default function HomeScreen({
 
                     <View style={{ flex: 1 }}>
                       <Text style={styles.pendingTitle}>
-                        Você tem 4 pedidos pendentes
+                        Você tem {dashboardData.pending} pedidos pendentes
                       </Text>
 
                       <Text style={styles.pendingDescription}>
@@ -433,7 +470,7 @@ export default function HomeScreen({
 
                     <TouchableOpacity
                     style={styles.storeBannerButton}
-                      onPress={() => setShowDashboard(true)}
+                      onPress={() => { setShowDashboard(true); onRefreshDashboard(); }}
                       activeOpacity={0.8}
                     >
                       <Ionicons
@@ -462,7 +499,7 @@ export default function HomeScreen({
                   <View style={styles.quickActions}>
                     <TouchableOpacity
                       style={styles.quickAction}
-                      onPress={() => setShowDashboard(true)}
+                      onPress={() => { setShowDashboard(true); onRefreshDashboard(); }}
                       activeOpacity={0.8}
                     >
                       <View style={styles.quickActionIcon}>
@@ -536,21 +573,7 @@ export default function HomeScreen({
                     Escolha uma lavanderia, agende a coleta e deixe o resto com a gente.
                   </Text>
 
-                  <TouchableOpacity
-                    style={styles.promoButton}
-                    onPress={() => startSchedule()}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.promoButtonText}>
-                      Agendar coleta
-                    </Text>
-
-                    <Ionicons
-                      name="arrow-forward"
-                      size={17}
-                      color="#FFFFFF"
-                    />
-                  </TouchableOpacity>
+                 
                 </View>
 
                 <View style={styles.promoIllustration}>
@@ -603,7 +626,13 @@ export default function HomeScreen({
               )}
 
               <View style={styles.laundryList}>
-                {laundries.map((laundry) => {
+                {availableLaundries.length === 0 ? (
+                  <View style={styles.emptyLaundryCard}>
+                    <Ionicons name="storefront-outline" size={30} color="#7B8798" />
+                    <Text style={styles.emptyLaundryTitle}>Nenhuma lavanderia disponível</Text>
+                    <Text style={styles.emptyLaundryText}>As lavanderias ativas aparecerão aqui quando cadastrarem seus dados.</Text>
+                  </View>
+                ) : availableLaundries.map((laundry) => {
                   const isSelected =
                     selectedLaundry?.id === laundry.id;
 
@@ -693,63 +722,6 @@ export default function HomeScreen({
                 })}
               </View>
 
-              {/* SERVIÇOS */}
-              <View style={styles.sectionHeader}>
-                <View style={styles.sectionHeaderText}>
-                  <Text style={styles.sectionTitle}>
-                    Nossos serviços
-                  </Text>
-
-                  <Text style={styles.sectionSubtitle}>
-                    Escolha o serviço que você precisa.
-                  </Text>
-                </View>
-
-                <Ionicons
-                 name="shirt-outline"
-                  size={22}
-                  color="#176B87"
-                />
-              </View>
-
-              <View style={styles.serviceList}>
-                {services.map((item) => (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={styles.serviceCard}
-                    onPress={() => startSchedule(item.name)}
-                    activeOpacity={0.8}
-                  >
-                    <View style={styles.serviceIcon}>
-                      <Ionicons
-                        name="shirt-outline"
-                        size={24}
-                        color="#176B87"
-                      />
-                    </View>
-
-                    <View style={styles.serviceInfo}>
-                      <Text style={styles.serviceName}>
-                        {item.name}
-                      </Text>
-
-                      <Text style={styles.serviceDescription}>
-                        {item.description}
-                      </Text>
-
-                      <Text style={styles.servicePrice}>
-                        A partir de {money(item.price)}
-                      </Text>
-                    </View>
-
-                    <Ionicons
-                      name="chevron-forward"
-                      size={21}
-                      color="#8A9AA3"
-                    />
-                  </TouchableOpacity>
-                ))}
-              </View>
 
               {/* COMO FUNCIONA */}
 <View style={styles.howItWorksSection}>
@@ -921,6 +893,10 @@ const styles = StyleSheet.create({
     color: '#75858E',
     marginTop: 4,
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  notificationButton: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#E5F2F5', alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  notificationBadge: { position: 'absolute', top: -2, right: -2, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: '#D92D20', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4, borderWidth: 1.5, borderColor: '#F5F8FA' },
+  notificationBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '900' },
   profileButton: {
     width: 46,
     height: 46,
@@ -1595,4 +1571,7 @@ stepDescription: {
     color: '#176B87',
     fontWeight: '800',
   },
+  emptyLaundryCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5EAF0', padding: 22, alignItems: 'center', gap: 8 },
+  emptyLaundryTitle: { color: '#263746', fontSize: 15, fontWeight: '800', textAlign: 'center' },
+  emptyLaundryText: { color: '#7B8798', fontSize: 12, textAlign: 'center', lineHeight: 18 },
 });
