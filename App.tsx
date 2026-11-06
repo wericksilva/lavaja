@@ -703,17 +703,27 @@ const updateOrderStep = async (value: string) => {
       password,
     });
 
-    if (error) {
-      showAppMessage(
-        'Não foi possível entrar',
-        error.message === 'Invalid login credentials'
-          ? 'E-mail ou senha incorretos. Confira os dados e tente novamente.'
-          : /email not confirmed/i.test(error.message)
-            ? 'Seu cadastro foi criado, mas o e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e clique no link de confirmação. Depois volte aqui para entrar.'
-            : error.message,
-      );
-      return;
-    }
+    
+if (error) {
+  // Senha ou e-mail incorretos: informa a LoginScreen
+  // para descontar uma tentativa.
+  if (error.message === 'Invalid login credentials') {
+    throw new Error('E-mail ou senha incorretos.');
+  }
+
+  // Outros erros não devem descontar tentativas.
+  if (/email not confirmed/i.test(error.message)) {
+    showAppMessage(
+      'E-mail não confirmado',
+      'Seu cadastro foi criado, mas o e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e clique no link de confirmação. Depois volte aqui para entrar.',
+    );
+    return;
+  }
+
+  showAppMessage('Não foi possível entrar', error.message);
+  return;
+}
+
 
     // Primeiro tenta localizar o perfil criado pelo gatilho do banco.
     const { data: existingProfile, error: profileReadError } = await supabase
