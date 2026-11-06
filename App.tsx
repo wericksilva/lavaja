@@ -70,6 +70,8 @@ export default function App() {
     inProgress: 0,
     completedMonth: 0,
     ordersValueMonth: 0,
+    reviewCount: 0,
+    averageRating: 0,
     weeklyRevenue: [],
   });
   const [dashboardLoading, setDashboardLoading] = useState(false);
@@ -266,6 +268,15 @@ setScreen('home');
       if (error) throw error;
 
       const rows = (data ?? []).filter((order) => order.laundry_id === laundryId);
+      const { data: storeReviewRows, error: storeReviewsError } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('laundry_id', laundryId);
+      if (storeReviewsError) throw storeReviewsError;
+      const reviewCount = storeReviewRows?.length ?? 0;
+      const averageRating = reviewCount > 0
+        ? storeReviewRows!.reduce((sum, review) => sum + Number(review.rating ?? 0), 0) / reviewCount
+        : 0;
       const now = new Date();
       const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -317,6 +328,8 @@ setScreen('home');
         inProgress,
         completedMonth,
         ordersValueMonth,
+        reviewCount,
+        averageRating,
         weeklyRevenue,
       });
     } catch (error) {
@@ -336,6 +349,7 @@ setScreen('home');
     setReviews([]);
     setAvailableLaundries([]);
     setStoreLaundryId('');
+    setDashboardData({ receivedToday: 0, pending: 0, inProgress: 0, completedMonth: 0, ordersValueMonth: 0, reviewCount: 0, averageRating: 0, weeklyRevenue: [] });
 
     try {
       if (type === 'store') {
@@ -356,27 +370,35 @@ setScreen('home');
           mapDbOrder(row as Parameters<typeof mapDbOrder>[0]),
         );
 
-        setAvailableLaundries(
-          laundriesRows.map((item) => ({
-            id: item.id,
-            name: item.name,
-            rating: '0,0',
-            distance: '',
-            deliveryFee: Number(item.delivery_fee),
-            address: item.address,
-            description: item.description,
-          })),
-        );
-        setOrders(mappedOrders);
-
-        // Carrega avaliações públicas de todas as lavanderias. A tela de
-        // detalhes filtra por laundryId, enquanto Meus pedidos usa orderId.
+        // Carrega as avaliações para calcular média e quantidade por lavanderia.
         const { data: reviewRows, error: reviewsError } = await supabase
           .from('reviews')
           .select('order_id, laundry_id, rating, comment, created_at')
           .order('created_at', { ascending: false });
-
         if (reviewsError) throw reviewsError;
+
+        const reviewStats = new Map<string, { total: number; sum: number }>();
+        (reviewRows ?? []).forEach((review) => {
+          if (!review.laundry_id) return;
+          const current = reviewStats.get(review.laundry_id) ?? { total: 0, sum: 0 };
+          current.total += 1;
+          current.sum += Number(review.rating ?? 0);
+          reviewStats.set(review.laundry_id, current);
+        });
+
+        setAvailableLaundries(
+          laundriesRows.map((item) => {
+            const stats = reviewStats.get(item.id);
+            return {
+              id: item.id, name: item.name,
+              rating: stats && stats.total ? (stats.sum / stats.total).toFixed(1).replace('.', ',') : '—',
+              ratingCount: stats?.total ?? 0,
+              distance: '', deliveryFee: Number(item.delivery_fee),
+              address: item.address, description: item.description,
+            };
+          }),
+        );
+        setOrders(mappedOrders);
 
         const orderIdByDatabaseId = new Map<string, string>();
         mappedOrders.forEach((order) => {

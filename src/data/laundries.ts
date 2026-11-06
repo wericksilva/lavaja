@@ -2,6 +2,7 @@ export type Laundry = {
   id: string;
   name: string;
   rating: string;
+  ratingCount?: number;
   distance: string;
   deliveryFee: number;
   address: string;

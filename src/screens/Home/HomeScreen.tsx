@@ -22,6 +22,8 @@ export type DashboardData = {
   inProgress: number;
   completedMonth: number;
   ordersValueMonth: number;
+  reviewCount: number;
+  averageRating: number;
   weeklyRevenue: { day: string; value: number }[];
 };
 
@@ -31,6 +33,8 @@ const EMPTY_DASHBOARD: DashboardData = {
   inProgress: 0,
   completedMonth: 0,
   ordersValueMonth: 0,
+  reviewCount: 0,
+  averageRating: 0,
   weeklyRevenue: [],
 };
 
@@ -246,6 +250,24 @@ export default function HomeScreen({
                       <Text style={styles.revenueFooterText}>
                         Soma dos pedidos não cancelados neste mês
                       </Text>
+                    </View>
+                  </View>
+
+                  {/* AVALIAÇÕES RECEBIDAS */}
+                  <View style={styles.reviewSummaryCard}>
+                    <View style={styles.reviewSummaryIcon}>
+                      <Ionicons name="star" size={23} color="#D99A22" />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.reviewSummaryLabel}>Avaliações dos clientes</Text>
+                      <View style={styles.reviewSummaryValues}>
+                        <Text style={styles.reviewSummaryRating}>
+                          {dashboardData.reviewCount > 0 ? dashboardData.averageRating.toFixed(1).replace('.', ',') : '—'}
+                        </Text>
+                        <Text style={styles.reviewSummaryCount}>
+                          {dashboardData.reviewCount} {dashboardData.reviewCount === 1 ? 'avaliação' : 'avaliações'}
+                        </Text>
+                      </View>
                     </View>
                   </View>
 
@@ -686,6 +708,9 @@ export default function HomeScreen({
 
                             <Text style={styles.detailText}>
                               {laundry.rating}
+                            </Text>
+                            <Text style={styles.reviewCountInline}>
+                              ({laundry.ratingCount ?? 0} {laundry.ratingCount === 1 ? 'avaliação' : 'avaliações'})
                             </Text>
                           </View>
 
@@ -1574,4 +1599,15 @@ stepDescription: {
   emptyLaundryCard: { backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E5EAF0', padding: 22, alignItems: 'center', gap: 8 },
   emptyLaundryTitle: { color: '#263746', fontSize: 15, fontWeight: '800', textAlign: 'center' },
   emptyLaundryText: { color: '#7B8798', fontSize: 12, textAlign: 'center', lineHeight: 18 },
+  reviewSummaryCard: {
+    backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 22,
+    borderWidth: 1, borderColor: '#E5EDF1', flexDirection: 'row', alignItems: 'center', gap: 13,
+  },
+  reviewSummaryIcon: { width: 46, height: 46, borderRadius: 14, backgroundColor: '#FFF5DF', alignItems: 'center', justifyContent: 'center' },
+  reviewSummaryLabel: { color: '#73818B', fontSize: 12, fontWeight: '600' },
+  reviewSummaryValues: { flexDirection: 'row', alignItems: 'baseline', gap: 9, marginTop: 3 },
+  reviewSummaryRating: { color: '#17324D', fontSize: 25, fontWeight: '900' },
+  reviewSummaryCount: { color: '#73818B', fontSize: 12 },
+  reviewCountInline: { color: '#73818B', fontSize: 10, marginLeft: -3 },
+
 });

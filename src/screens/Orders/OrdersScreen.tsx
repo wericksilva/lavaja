@@ -63,6 +63,8 @@ export default function OrdersScreen({
   const [reviewComment, setReviewComment] = useState('');
   const [submittingReview, setSubmittingReview] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'progress' | 'delivered' | 'cancelled'>('all');
+  const [searchText, setSearchText] = useState('');
 
   const openReview = (orderId: string) => {
     setReviewOrderId(orderId);
@@ -107,6 +109,28 @@ export default function OrdersScreen({
         : [...current, id],
     );
   };
+
+  const getOrderGroup = (order: LaundryOrder) => {
+    if (order.status === 'cancelled') return 'cancelled';
+    if (order.status === 'delivered' || order.currentStep === 5) return 'delivered';
+    if (order.status === 'pending' || order.currentStep === 0) return 'pending';
+    return 'progress';
+  };
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesStatus = statusFilter === 'all' || getOrderGroup(order) === statusFilter;
+    const term = searchText.trim().toLocaleLowerCase('pt-BR');
+    const matchesSearch = !term || order.id.toLocaleLowerCase('pt-BR').includes(term) || order.service.toLocaleLowerCase('pt-BR').includes(term);
+    return matchesStatus && matchesSearch;
+  });
+
+  const filterOptions = [
+    { key: 'all' as const, label: 'Todos', count: orders.length },
+    { key: 'pending' as const, label: 'Aguardando', count: orders.filter((order) => getOrderGroup(order) === 'pending').length },
+    { key: 'progress' as const, label: 'Em andamento', count: orders.filter((order) => getOrderGroup(order) === 'progress').length },
+    { key: 'delivered' as const, label: 'Entregues', count: orders.filter((order) => getOrderGroup(order) === 'delivered').length },
+    { key: 'cancelled' as const, label: 'Cancelados', count: orders.filter((order) => getOrderGroup(order) === 'cancelled').length },
+  ];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -159,6 +183,45 @@ export default function OrdersScreen({
           <Text style={styles.refreshButtonText}>{refreshing ? 'Atualizando...' : 'Atualizar pedidos'}</Text>
         </TouchableOpacity>
 
+        {orders.length > 0 && (
+          <View style={styles.filterPanel}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search-outline" size={19} color={C.muted} />
+              <TextInput
+                value={searchText}
+                onChangeText={setSearchText}
+                placeholder="Buscar por pedido ou serviço..."
+                placeholderTextColor={C.muted}
+                style={styles.searchInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {searchText.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchText('')} hitSlop={8}>
+                  <Ionicons name="close-circle" size={18} color={C.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterList}>
+              {filterOptions.map((option) => {
+                const active = statusFilter === option.key;
+                return (
+                  <TouchableOpacity
+                    key={option.key}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => setStatusFilter(option.key)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{option.label}</Text>
+                    <Text style={[styles.filterChipCount, active && styles.filterChipTextActive]}>{option.count}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+            <Text style={styles.resultsText}>Mostrando {filteredOrders.length} de {orders.length} pedidos</Text>
+          </View>
+        )}
+
         {orders.length === 0 ? (
           <View style={styles.emptyCard}>
             <Ionicons name="receipt-outline" size={42} color={C.muted} />
@@ -169,8 +232,17 @@ export default function OrdersScreen({
               Seus pedidos aparecerão aqui quando você fizer uma solicitação.
             </Text>
           </View>
+        ) : filteredOrders.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <Ionicons name="filter-outline" size={38} color={C.muted} />
+            <Text style={styles.emptyTitle}>Nenhum pedido encontrado</Text>
+            <Text style={styles.emptyText}>Tente mudar o filtro ou o termo da busca.</Text>
+            <TouchableOpacity onPress={() => { setStatusFilter('all'); setSearchText(''); }} style={{ marginTop: 14 }}>
+              <Text style={{ color: C.blue, fontWeight: '800' }}>Limpar filtros</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
-          orders.map((order) => {
+          filteredOrders.map((order) => {
             const isCompleted = order.currentStep === 5;
             const isCancelled = order.status === 'cancelled';
             const isExpanded = expandedOrders.includes(order.id);
@@ -922,4 +994,15 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '800',
   },
+  filterPanel: { backgroundColor: C.white, borderWidth: 1, borderColor: C.line, borderRadius: 16, padding: 12, marginBottom: 15 },
+  searchBox: { minHeight: 44, borderWidth: 1, borderColor: C.line, borderRadius: 11, paddingHorizontal: 11, flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#FAFCFD' },
+  searchInput: { flex: 1, color: C.text, fontSize: 13, paddingVertical: 8 },
+  filterList: { gap: 8, paddingTop: 12, paddingBottom: 3 },
+  filterChip: { minHeight: 34, borderRadius: 18, paddingHorizontal: 12, backgroundColor: '#F2F6F8', borderWidth: 1, borderColor: C.line, flexDirection: 'row', alignItems: 'center', gap: 6 },
+  filterChipActive: { backgroundColor: C.blue, borderColor: C.blue },
+  filterChipText: { color: C.text, fontSize: 11, fontWeight: '700' },
+  filterChipTextActive: { color: C.white },
+  filterChipCount: { color: C.muted, fontSize: 10, fontWeight: '800' },
+  resultsText: { color: C.muted, fontSize: 10, marginTop: 9 },
+
 });
