@@ -1,4 +1,3 @@
-
 import { Ionicons } from '@expo/vector-icons';
 
 export type Screen =
@@ -13,6 +12,7 @@ export type Screen =
   | 'admin'
   | 'tracking'
   | 'forgotPassword'
+  | 'resetPassword'
   | 'helpSupport'
   | 'laundryDetails'
   | 'services'
