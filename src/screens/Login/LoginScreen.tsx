@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+
 import {
   SafeAreaView,
   ScrollView,
@@ -7,8 +8,8 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
+
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -17,6 +18,7 @@ import { styles } from '../../styles/globalStyles';
 import Field from '../../components/Field';
 import Brand from '../../components/Brand';
 import PrimaryButton from '../../components/PrimaryButton';
+
 import type { Navigate } from '../../types';
 
 type Props = {
@@ -29,17 +31,30 @@ type Props = {
   showHome: () => void;
 };
 
-export default function LoginScreen({ email, setEmail, password, setPassword, login, navigate, showHome }: Props) {
+export default function LoginScreen({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  login,
+  navigate,
+  showHome,
+}: Props) {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleLogoPress = () => {
-    if (Platform.OS === 'web') window.location.reload();
-    else showHome();
+    if (Platform.OS === 'web') {
+      window.location.reload();
+    } else {
+      showHome();
+    }
   };
 
   const validateAndLogin = async () => {
+    if (loading) return;
+
     let valid = true;
     setEmailError('');
     setPasswordError('');
@@ -47,23 +62,23 @@ export default function LoginScreen({ email, setEmail, password, setPassword, lo
     if (!email.trim()) {
       setEmailError('O e-mail é obrigatório.');
       valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email.trim())) {
       setEmailError('Informe um e-mail válido.');
       valid = false;
     }
+
     if (!password.trim()) {
       setPasswordError('A senha é obrigatória.');
       valid = false;
     }
-    if (!valid || loading) return;
 
-    setLoading(true);
+    if (!valid) return;
+
     try {
+      setLoading(true);
       await login();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Não foi possível entrar. Tente novamente.';
-      if (Platform.OS === 'web') window.alert(`Erro ao entrar\n\n${message}`);
-      else Alert.alert('Erro ao entrar', message);
+      console.error('Erro ao realizar login:', error);
     } finally {
       setLoading(false);
     }
@@ -72,41 +87,106 @@ export default function LoginScreen({ email, setEmail, password, setPassword, lo
   return (
     <SafeAreaView style={styles.safe}>
       <ExpoStatusBar style="dark" />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.authScroll} keyboardShouldPersistTaps="handled">
+
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+        contentContainerStyle={styles.authScroll}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.authHero}>
-            <TouchableOpacity onPress={handleLogoPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel="Logo LavaJá">
+            <TouchableOpacity
+              onPress={handleLogoPress}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Atualizar página LavaJá"
+              style={{ width: '100%' }}
+            >
               <Brand />
             </TouchableOpacity>
+
             <View style={styles.heroIllustration}>
               <View style={styles.bubbleOne} />
               <View style={styles.bubbleTwo} />
               <Ionicons name="shirt" size={74} color={C.blue} />
-              <View style={styles.heroCheck}><Ionicons name="checkmark" size={19} color="#fff" /></View>
+              <View style={styles.heroCheck}>
+                <Ionicons name="checkmark" size={19} color="#fff" />
+              </View>
             </View>
-            <Text style={styles.authTitle}>Roupa limpa.{"\n"}Tempo livre.</Text>
-            <Text style={styles.authSubtitle}>A gente busca, lava e entrega na sua porta.</Text>
+
+            <Text style={styles.authTitle}>
+              Roupa limpa.{"\\n"}Tempo livre.
+            </Text>
+
+            <Text style={styles.authSubtitle}>
+              A gente busca, lava e entrega na sua porta.
+            </Text>
           </View>
 
           <View style={styles.authCard}>
             <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
-            <Text style={styles.cardSubtitle}>Entre para agendar sua próxima coleta.</Text>
+            <Text style={styles.cardSubtitle}>
+              Entre para agendar sua próxima coleta.
+            </Text>
 
-            <Field label="E-mail" value={email} onChangeText={(value) => { setEmail(value); if (emailError) setEmailError(''); }} placeholder="voce@email.com" keyboardType="email-address" icon="mail-outline" />
-            {!!emailError && <Text style={validationStyles.error}>{emailError}</Text>}
+            <Field
+              label="E-mail"
+              value={email}
+              onChangeText={(value) => {
+                setEmail(value);
+                if (emailError) setEmailError('');
+              }}
+              placeholder="voce@email.com"
+              keyboardType="email-address"
+              icon="mail-outline"
+            />
 
-            <Field label="Senha" value={password} onChangeText={(value) => { setPassword(value); if (passwordError) setPasswordError(''); }} placeholder="Sua senha" secureTextEntry icon="lock-closed-outline" />
-            {!!passwordError && <Text style={validationStyles.error}>{passwordError}</Text>}
+            {emailError ? (
+              <Text style={validationStyles.error}>{emailError}</Text>
+            ) : null}
 
-            <TouchableOpacity style={styles.forgot} onPress={() => navigate('forgotPassword')} activeOpacity={0.7}>
+            <Field
+              label="Senha"
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                if (passwordError) setPasswordError('');
+              }}
+              placeholder="Sua senha"
+              secureTextEntry
+              icon="lock-closed-outline"
+            />
+
+            {passwordError ? (
+              <Text style={validationStyles.error}>{passwordError}</Text>
+            ) : null}
+
+            <TouchableOpacity
+              style={styles.forgot}
+              onPress={() => navigate('forgotPassword')}
+              activeOpacity={0.7}
+              disabled={loading}
+            >
               <Text style={styles.linkText}>Esqueci minha senha</Text>
             </TouchableOpacity>
 
-            <PrimaryButton title={loading ? 'Entrando...' : 'Entrar'} onPress={validateAndLogin} icon="arrow-forward" />
+            <PrimaryButton
+              title="Entrar"
+              onPress={validateAndLogin}
+              icon="arrow-forward"
+              loading={loading}
+              disabled={loading}
+            />
 
             <View style={styles.authFooter}>
               <Text style={styles.mutedText}>Ainda não tem conta?{' '}</Text>
-              <TouchableOpacity onPress={() => navigate('register')} activeOpacity={0.7}>
+              <TouchableOpacity
+                onPress={() => navigate('register')}
+                activeOpacity={0.7}
+                disabled={loading}
+              >
                 <Text style={styles.linkText}>Criar cadastro</Text>
               </TouchableOpacity>
             </View>
@@ -118,5 +198,11 @@ export default function LoginScreen({ email, setEmail, password, setPassword, lo
 }
 
 const validationStyles = {
-  error: { color: '#D64545', fontSize: 12, marginTop: -8, marginBottom: 12, marginLeft: 4 },
+  error: {
+    color: '#D64545',
+    fontSize: 12,
+    marginTop: -8,
+    marginBottom: 12,
+    marginLeft: 4,
+  },
 };
