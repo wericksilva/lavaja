@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 
@@ -164,7 +165,7 @@ export default function App() {
   };
 
   // Login
-  const login = () => {
+  const login = async () => {
     if (!email.trim() || !password.trim()) {
       Alert.alert(
         'Falta preencher',
@@ -172,6 +173,11 @@ export default function App() {
       );
       return;
     }
+
+    // Simulação temporária do processamento do login
+    await new Promise<void>((resolve) =>
+      setTimeout(resolve, 700),
+    );
 
     setName((currentName) => currentName.trim() || 'Cliente');
 

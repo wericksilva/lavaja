@@ -26,7 +26,7 @@ type Props = {
   setEmail: (value: string) => void;
   password: string;
   setPassword: (value: string) => void;
-  login: () => void;
+  login: () => void | Promise<void>;
   navigate: Navigate;
   showHome: () => void;
 };
@@ -42,6 +42,7 @@ export default function LoginScreen({
 }: Props) {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogoPress = () => {
     if (Platform.OS === 'web') {
@@ -51,7 +52,9 @@ export default function LoginScreen({
     }
   };
 
-  const validateAndLogin = () => {
+  const validateAndLogin = async () => {
+    if (loading) return;
+
     let valid = true;
 
     setEmailError('');
@@ -72,8 +75,15 @@ export default function LoginScreen({
       valid = false;
     }
 
-    if (valid) {
-      login();
+    if (!valid) return;
+
+    try {
+      setLoading(true);
+      await login();
+    } catch (error) {
+      console.error('Erro ao realizar login:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -168,6 +178,7 @@ export default function LoginScreen({
               style={styles.forgot}
               onPress={() => navigate('forgotPassword')}
               activeOpacity={0.7}
+              disabled={loading}
             >
               <Text style={styles.linkText}>
                 Esqueci minha senha
@@ -178,6 +189,8 @@ export default function LoginScreen({
               title="Entrar"
               onPress={validateAndLogin}
               icon="arrow-forward"
+              loading={loading}
+              disabled={loading}
             />
 
             <View style={styles.authFooter}>
@@ -188,6 +201,7 @@ export default function LoginScreen({
               <TouchableOpacity
                 onPress={() => navigate('register')}
                 activeOpacity={0.7}
+                disabled={loading}
               >
                 <Text style={styles.linkText}>
                   Criar cadastro
