@@ -7,7 +7,7 @@ import * as Notifications from 'expo-notifications';
 import Constants from 'expo-constants';
 import { supabase } from './src/lib/supabase';
 import { ensureStoreLaundry, getActiveLaundries, getRelatedOrders, mapDbOrder } from './src/lib/database';
-
+import ResetPasswordScreen from './src/screens/ResetPassword/ResetPasswordScreen';
 
 import type { Screen, Service, PaymentMethod } from './src/types';
 import { services, type ServiceItem } from './src/data/services';
@@ -44,6 +44,7 @@ Notifications.setNotificationHandler({ handleNotification: async () => ({ should
 export default function App() {
   // Navegação
   const [screen, setScreen] = useState<Screen>('login');
+  const passwordRecoveryRef = useRef(false);
 
   // Avaliações dos pedidos
   const [reviews, setReviews] = useState<Review[]>([]);
@@ -111,18 +112,41 @@ export default function App() {
     return () => { active = false; void supabase.removeChannel(channel); };
   }, [profileId]);
 
+  useEffect(() => {
+  const {
+    data: { subscription },
+  } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY' && session?.user) {
+       passwordRecoveryRef.current = true;
+      setScreen('resetPassword');
+    }
+  });
+
+  return () => {
+    subscription.unsubscribe();
+  };
+}, []);
+
   // Restaura a sessão e carrega o perfil salvo no Supabase
   useEffect(() => {
     let mounted = true;
     const restoreSession = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
-      if (error || !session?.user || !mounted) return;
+
+if (
+  error ||
+  !session?.user ||
+  !mounted ||
+  passwordRecoveryRef.current
+) {
+  return;
+}
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('id, name, email, phone, account_type, default_address')
         .eq('id', session.user.id)
         .maybeSingle();
-      if (!mounted) return;
+      if (!mounted || passwordRecoveryRef.current) return;
 
       let currentProfile = profile;
 
@@ -169,8 +193,18 @@ export default function App() {
       setPhone(currentProfile.phone ?? '');
       setAddress(currentProfile.default_address ?? '');
       setAccountType(type);
-      await loadWorkspace(session.user.id, type, currentProfile.name ?? '', currentProfile.phone ?? '');
-      setScreen('home');
+      if (passwordRecoveryRef.current) return;
+
+await loadWorkspace(
+  session.user.id,
+  type,
+  currentProfile.name ?? '',
+  currentProfile.phone ?? '',
+);
+
+if (!mounted || passwordRecoveryRef.current) return;
+
+setScreen('home');
     };
     void restoreSession();
     return () => { mounted = false; };
@@ -703,17 +737,27 @@ const updateOrderStep = async (value: string) => {
       password,
     });
 
-    if (error) {
-      showAppMessage(
-        'Não foi possível entrar',
-        error.message === 'Invalid login credentials'
-          ? 'E-mail ou senha incorretos. Confira os dados e tente novamente.'
-          : /email not confirmed/i.test(error.message)
-            ? 'Seu cadastro foi criado, mas o e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e clique no link de confirmação. Depois volte aqui para entrar.'
-            : error.message,
-      );
-      return;
-    }
+    
+if (error) {
+  // Senha ou e-mail incorretos: informa a LoginScreen
+  // para descontar uma tentativa.
+  if (error.message === 'Invalid login credentials') {
+    throw new Error('E-mail ou senha incorretos.');
+  }
+
+  // Outros erros não devem descontar tentativas.
+  if (/email not confirmed/i.test(error.message)) {
+    showAppMessage(
+      'E-mail não confirmado',
+      'Seu cadastro foi criado, mas o e-mail ainda não foi confirmado. Abra a mensagem enviada pelo Supabase e clique no link de confirmação. Depois volte aqui para entrar.',
+    );
+    return;
+  }
+
+  showAppMessage('Não foi possível entrar', error.message);
+  return;
+}
+
 
     // Primeiro tenta localizar o perfil criado pelo gatilho do banco.
     const { data: existingProfile, error: profileReadError } = await supabase
@@ -1004,6 +1048,40 @@ const updateOrderStep = async (value: string) => {
           }}
         />
       );
+      case 'resetPassword':
+  return (
+    <ResetPasswordScreen
+      onBack={() => {
+        void supabase.auth.signOut();
+        passwordRecoveryRef.current = false;
+        setScreen('login');
+      }}
+      onSave={async (newPassword) => {
+        const { error } = await supabase.auth.updateUser({
+          password: newPassword,
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        const { error: signOutError } = await supabase.auth.signOut();
+
+        if (signOutError) {
+          throw signOutError;
+        }
+
+        passwordRecoveryRef.current = false;
+        setPassword('');
+        setScreen('login');
+
+        showAppMessage(
+          'Senha alterada!',
+          'Sua senha foi atualizada. Agora você pode entrar no LavaJá com sua nova senha.',
+        );
+      }}
+    />
+  );
 
     case 'helpSupport':
       return <HelpSupportScreen navigate={setScreen} />;
