@@ -1,42 +1,30 @@
-# Checklist de teste — LavaJá
+# Teste manual — Motoboy
 
-## Notificações
-- [ ] Aplicar a migration no Supabase.
-- [ ] Entrar como cliente e como loja e conferir o sino na tela inicial.
-- [ ] Criar pedido: a loja deve receber notificação na central.
-- [ ] Alterar a etapa do pedido: o outro participante deve receber notificação.
-- [ ] Abrir a central e tocar na notificação: o pedido correto deve abrir.
-- [ ] Em build nativo com EAS/FCM/APNs configurados, conferir também o push do sistema.
+## Configuração do banco
 
-## Cancelamento
-- [ ] Cliente cancela pedido nas etapas 0 e 1.
-- [ ] Cliente não consegue cancelar a partir da etapa 2.
-- [ ] Loja consegue cancelar até etapa 2.
-- [ ] Loja não consegue cancelar a partir da etapa 3.
-- [ ] Pedido entregue ou cancelado não pode ser cancelado novamente.
+Execute no SQL Editor do Supabase, nesta ordem:
 
-## Chat
-- [ ] Abrir chat pelo pedido no usuário cliente.
-- [ ] Abrir o mesmo pedido na loja e responder.
-- [ ] Conferir atualização em tempo real nos dois lados.
-- [ ] Confirmar que usuário sem relação com o pedido não consegue ler/enviar mensagens (RLS).
+1. `supabase/migrations/20261111_motoboy_deliveries.sql` (se ainda não tiver executado).
+2. `supabase/migrations/20261112_motoboy_dashboard_history.sql`.
 
-## Relatórios
-- [ ] Entrar como loja e abrir Área administrativa > Relatórios.
-- [ ] Conferir totais, entregues, em andamento, cancelados, faturamento bruto e ticket médio.
-- [ ] Conferir ranking dos serviços.
+A segunda migração atualiza as funções RPC usadas pelo painel e preserva a identificação do motoboy responsável pela coleta e pelo retorno.
 
-## Pagamentos
-- [ ] Nenhum checkout online Pix/cartão ou integração Mercado Pago faz parte desta versão.
+## Teste do painel
 
+1. Entre com uma conta do tipo **Motoboy**.
+2. Confira o Dashboard e os contadores.
+3. Abra **Disponíveis** e escolha uma corrida.
+4. Toque em **Ver detalhes** e confira cliente, lavanderia, telefones, endereços, serviço, agendamento e observações.
+5. Feche os detalhes e toque em **Ver rota**. O Google Maps deve abrir usando a localização atual como origem, o local de coleta como parada e o destino como destino final.
+6. Aceite a corrida e confira que ela aparece em **Em andamento**.
+7. Confirme a coleta no cliente e depois a entrega na lavanderia.
+8. Aguarde a lavanderia marcar o pedido como pronto.
+9. Aceite a corrida de retorno, abra os detalhes/rota e confirme a entrega final.
+10. Abra **Histórico** e confira o pedido finalizado.
+11. Volte ao Dashboard e confira os contadores atualizados.
 
-## Teste do fluxo Motoboy
+## Observações
 
-1. Execute `supabase/migrations/20261111_motoboy_deliveries.sql` no SQL Editor do Supabase.
-2. Cadastre uma conta nova escolhendo **Sou motoboy** e entre com ela.
-3. Em outra conta de cliente, crie um pedido e, na conta da lavanderia, avance até **Coleta das roupas** (status de coleta agendada).
-4. No painel do motoboy, atualize a lista e aceite a corrida.
-5. Confirme a coleta no cliente e depois a entrega na lavanderia.
-6. Na conta da lavanderia, avance o pedido pelas etapas de processamento até **Pronto para entrega**.
-7. No painel do motoboy, aceite a corrida de retorno e confirme a entrega final ao cliente.
-8. Confira que o pedido passa para **Entregue** e que o motoboy não consegue atualizar pedidos que não aceitou.
+- O histórico novo começa a registrar as participações após a segunda migração. Corridas antigas concluídas antes da criação dos campos de histórico não podem ser atribuídas retroativamente com certeza.
+- O motoboy vê somente informações operacionais necessárias para executar a entrega; valores e forma de pagamento não são retornados pela função RPC.
+- Para testar navegação, use um dispositivo com Google Maps ou navegador configurado. No computador, o link abre a versão web do Google Maps.

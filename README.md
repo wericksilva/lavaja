@@ -91,3 +91,18 @@ Esta versão inclui o perfil **Motoboy**. Antes de cadastrar ou liberar uma cont
 O motoboy consulta os dados operacionais por funções RPC: nome/telefone dos contatos, endereços, serviço, agendamento e instruções. Ele não recebe os dados de pagamento nem acesso geral à tabela de pedidos. A aceitação e as mudanças de etapa são validadas no banco e não dependem apenas da interface.
 
 > Importante: no painel da lavanderia, use **Pronto para entrega** como última etapa da lavanderia. A etapa **Pedido entregue** passa a ser confirmada pelo motoboy depois da entrega ao cliente.
+
+## 8. Melhorias do painel do motoboy
+
+Depois da migração inicial acima, execute também `supabase/migrations/20261112_motoboy_dashboard_history.sql` no SQL Editor do Supabase.
+
+O painel do motoboy agora possui quatro áreas:
+
+- **Resumo:** corridas/pedidos atendidos, entregas finais concluídas, entregas em andamento, corridas disponíveis, coletas encaminhadas à lavanderia e pedidos no histórico.
+- **Disponíveis:** visualização da coleta ou retorno antes de aceitar.
+- **Em andamento:** pedidos que estão atualmente atribuídos ao motoboy.
+- **Histórico:** pedidos concluídos em que o motoboy participou.
+
+Em cada cartão, **Ver detalhes** abre o resumo operacional do pedido. **Ver rota** abre o Google Maps com a localização atual do motoboy como ponto de partida, o endereço de coleta como parada e o endereço de destino como destino final. O painel não expõe valor nem forma de pagamento do pedido.
+
+A segunda migração adiciona `pickup_courier_id` e `return_courier_id` para preservar separadamente quem realizou a coleta e quem realizou a entrega final. Assim, o histórico continua disponível mesmo depois que `courier_id` é liberado para a próxima etapa.

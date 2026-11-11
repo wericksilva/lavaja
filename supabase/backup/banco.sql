@@ -288,77 +288,36 @@ create index IF not exists idx_reviews_laundry_id on public.reviews using btree 
 create index IF not exists idx_reviews_client_id on public.reviews using btree (client_id) TABLESPACE pg_default;
 
 
--- LavaJá: fluxo de coleta e entrega por motoboy.
--- Execute este arquivo no Supabase SQL Editor antes de liberar contas de motoboy.
+-- LavaJá: detalhes, estatísticas e histórico confiável do motoboy.
+-- Execute depois de 20261111_motoboy_deliveries.sql no Supabase SQL Editor.
 
--- 1) Habilita o novo tipo de conta.
-alter table public.profiles drop constraint if exists profiles_account_type_check;
-alter table public.profiles
-  add constraint profiles_account_type_check
-  check (account_type in ('client', 'store', 'motoboy'));
-
--- 2) Campos de atribuição e etapas logísticas no pedido existente.
 alter table public.orders
-  add column if not exists courier_id uuid null references public.profiles(id) on delete set null,
-  add column if not exists delivery_status text not null default 'awaiting_pickup',
-  add column if not exists courier_accepted_at timestamptz null,
-  add column if not exists delivered_to_laundry_at timestamptz null,
-  add column if not exists delivered_to_customer_at timestamptz null;
+  add column if not exists pickup_courier_id uuid null references public.profiles(id) on delete set null,
+  add column if not exists return_courier_id uuid null references public.profiles(id) on delete set null,
+  add column if not exists pickup_courier_accepted_at timestamptz null,
+  add column if not exists return_courier_accepted_at timestamptz null;
 
-alter table public.orders drop constraint if exists orders_delivery_status_check;
-alter table public.orders
-  add constraint orders_delivery_status_check check (
-    delivery_status in (
-      'awaiting_pickup',
-      'courier_to_customer',
-      'courier_to_laundry',
-      'at_laundry',
-      'awaiting_return',
-      'courier_to_customer_return',
-      'delivered_to_customer'
-    )
-  );
+create index if not exists idx_orders_pickup_courier_id on public.orders(pickup_courier_id);
+create index if not exists idx_orders_return_courier_id on public.orders(return_courier_id);
 
-create index if not exists idx_orders_courier_id on public.orders(courier_id);
-create index if not exists idx_orders_delivery_available on public.orders(status, delivery_status, scheduled_date);
-
--- Compatibilidade com pedidos que já existiam antes da ativação do motoboy.
+-- Preserva o vínculo dos motoboys que já estavam com uma corrida ativa antes desta migração.
 update public.orders
-set delivery_status = case
-  when status = 'ready' then 'awaiting_return'
-  when status = 'delivered' then 'delivered_to_customer'
-  when status in ('picked_up', 'washing') then 'at_laundry'
-  else 'awaiting_pickup'
-end
-where delivery_status = 'awaiting_pickup';
+set pickup_courier_id = courier_id,
+    pickup_courier_accepted_at = coalesce(pickup_courier_accepted_at, courier_accepted_at)
+where courier_id is not null
+  and delivery_status in ('courier_to_customer', 'courier_to_laundry')
+  and pickup_courier_id is null;
 
--- Quando a lavanderia marca o pedido como pronto, ele entra na fila de retorno.
-create or replace function public.set_delivery_return_available()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  if new.status = 'ready'
-     and old.status is distinct from new.status
-     and new.delivery_status = 'at_laundry' then
-    new.delivery_status := 'awaiting_return';
-    new.courier_id := null;
-    new.courier_accepted_at := null;
-  end if;
-  return new;
-end;
-$$;
+update public.orders
+set return_courier_id = courier_id,
+    return_courier_accepted_at = coalesce(return_courier_accepted_at, courier_accepted_at)
+where courier_id is not null
+  and delivery_status = 'courier_to_customer_return'
+  and return_courier_id is null;
 
-drop trigger if exists orders_make_return_available on public.orders;
-create trigger orders_make_return_available
-before update of status on public.orders
-for each row execute function public.set_delivery_return_available();
-
--- 3) Lista apenas os dados operacionais necessários ao entregador.
--- A função é SECURITY DEFINER para não depender de políticas amplas em orders/profiles.
-create or replace function public.motoboy_list_deliveries(p_scope text default 'available')
+-- A função retorna somente informações operacionais e de resumo necessárias ao motoboy.
+drop function if exists public.motoboy_list_deliveries(text);
+create function public.motoboy_list_deliveries(p_scope text default 'available')
 returns table (
   id uuid,
   order_number text,
@@ -374,7 +333,13 @@ returns table (
   laundry_phone text,
   laundry_address text,
   instructions text,
-  leg text
+  leg text,
+  created_at timestamptz,
+  delivered_to_laundry_at timestamptz,
+  delivered_to_customer_at timestamptz,
+  pickup_courier_id uuid,
+  return_courier_id uuid,
+  is_currently_assigned boolean
 )
 language plpgsql
 stable
@@ -395,7 +360,10 @@ begin
       select o.id, o.order_number, o.service_name, o.status, o.delivery_status,
         o.scheduled_date, o.scheduled_time,
         coalesce(cp.name, 'Cliente'), coalesce(cp.phone, ''), o.address,
-        l.name, coalesce(l.phone, ''), l.address, coalesce(o.instructions, ''), 'pickup'::text
+        l.name, coalesce(l.phone, ''), l.address, coalesce(o.instructions, ''), 'pickup'::text,
+        o.created_at, o.delivered_to_laundry_at,
+        o.delivered_to_customer_at, o.pickup_courier_id, o.return_courier_id,
+        (o.courier_id = v_uid)
       from public.orders o
       join public.laundries l on l.id = o.laundry_id
       join public.profiles cp on cp.id = o.client_id
@@ -406,33 +374,45 @@ begin
       select o.id, o.order_number, o.service_name, o.status, o.delivery_status,
         o.scheduled_date, o.scheduled_time,
         coalesce(cp.name, 'Cliente'), coalesce(cp.phone, ''), o.address,
-        l.name, coalesce(l.phone, ''), l.address, coalesce(o.instructions, ''), 'return'::text
+        l.name, coalesce(l.phone, ''), l.address, coalesce(o.instructions, ''), 'return'::text,
+        o.created_at, o.delivered_to_laundry_at,
+        o.delivered_to_customer_at, o.pickup_courier_id, o.return_courier_id,
+        (o.courier_id = v_uid)
       from public.orders o
       join public.laundries l on l.id = o.laundry_id
       join public.profiles cp on cp.id = o.client_id
       where o.courier_id is null
         and o.status = 'ready'
         and o.delivery_status = 'awaiting_return'
-      order by 6 nulls last;
+      order by 6 nulls last, 7 nulls last;
   elsif p_scope = 'assigned' then
     return query
       select o.id, o.order_number, o.service_name, o.status, o.delivery_status,
         o.scheduled_date, o.scheduled_time,
         coalesce(cp.name, 'Cliente'), coalesce(cp.phone, ''), o.address,
         l.name, coalesce(l.phone, ''), l.address, coalesce(o.instructions, ''),
-        case when o.delivery_status = 'courier_to_customer_return' then 'return' else 'pickup' end::text
+        case
+          when o.delivery_status in ('awaiting_return', 'courier_to_customer_return', 'delivered_to_customer')
+            and (o.return_courier_id = v_uid or o.courier_id = v_uid) then 'return'::text
+          else 'pickup'::text
+        end,
+        o.created_at, o.delivered_to_laundry_at,
+        o.delivered_to_customer_at, o.pickup_courier_id, o.return_courier_id,
+        (o.courier_id = v_uid)
       from public.orders o
       join public.laundries l on l.id = o.laundry_id
       join public.profiles cp on cp.id = o.client_id
       where o.courier_id = v_uid
-      order by o.scheduled_date nulls last, o.created_at;
+         or o.pickup_courier_id = v_uid
+         or o.return_courier_id = v_uid
+      order by o.created_at desc;
   else
     raise exception 'Filtro de entregas inválido.';
   end if;
 end;
 $$;
 
--- 4) Aceitação atômica: duas pessoas não conseguem aceitar a mesma corrida.
+-- Aceitação atômica e gravação permanente de quem realizou cada trecho.
 create or replace function public.motoboy_accept_delivery(p_order_id uuid, p_leg text)
 returns void
 language plpgsql
@@ -451,15 +431,23 @@ begin
 
   if p_leg = 'pickup' then
     update public.orders
-      set courier_id = v_uid, delivery_status = 'courier_to_customer',
-          courier_accepted_at = now(), updated_at = now()
+      set courier_id = v_uid,
+          pickup_courier_id = v_uid,
+          pickup_courier_accepted_at = now(),
+          delivery_status = 'courier_to_customer',
+          courier_accepted_at = now(),
+          updated_at = now()
       where id = p_order_id and courier_id is null
         and status in ('confirmed', 'pickup_scheduled')
         and delivery_status = 'awaiting_pickup';
   elsif p_leg = 'return' then
     update public.orders
-      set courier_id = v_uid, delivery_status = 'courier_to_customer_return',
-          courier_accepted_at = now(), updated_at = now()
+      set courier_id = v_uid,
+          return_courier_id = v_uid,
+          return_courier_accepted_at = now(),
+          delivery_status = 'courier_to_customer_return',
+          courier_accepted_at = now(),
+          updated_at = now()
       where id = p_order_id and courier_id is null
         and status = 'ready' and delivery_status = 'awaiting_return';
   else
@@ -473,7 +461,7 @@ begin
 end;
 $$;
 
--- 5) Atualização limitada a três transições válidas e ao pedido atribuído ao usuário.
+-- Atualiza as etapas sem apagar o histórico de quem executou cada trecho.
 create or replace function public.motoboy_update_delivery(p_order_id uuid, p_next_status text)
 returns void
 language plpgsql
@@ -492,16 +480,19 @@ begin
 
   if p_next_status = 'courier_to_laundry' then
     update public.orders set delivery_status = p_next_status, updated_at = now()
-      where id = p_order_id and courier_id = v_uid and delivery_status = 'courier_to_customer';
+      where id = p_order_id and courier_id = v_uid
+        and pickup_courier_id = v_uid and delivery_status = 'courier_to_customer';
   elsif p_next_status = 'at_laundry' then
     update public.orders set delivery_status = p_next_status, courier_id = null,
       delivered_to_laundry_at = now(), updated_at = now()
-      where id = p_order_id and courier_id = v_uid and delivery_status = 'courier_to_laundry';
+      where id = p_order_id and courier_id = v_uid
+        and pickup_courier_id = v_uid and delivery_status = 'courier_to_laundry';
   elsif p_next_status = 'delivered_to_customer' then
     update public.orders set delivery_status = p_next_status, courier_id = null,
       delivered_to_customer_at = now(), status = 'delivered', current_step = 5,
       updated_at = now()
       where id = p_order_id and courier_id = v_uid
+        and return_courier_id = v_uid
         and delivery_status = 'courier_to_customer_return' and status = 'ready';
   else
     raise exception 'Transição de entrega inválida.';
