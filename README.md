@@ -106,3 +106,14 @@ O painel do motoboy agora possui quatro áreas:
 Em cada cartão, **Ver detalhes** abre o resumo operacional do pedido. **Ver rota** abre o Google Maps com a localização atual do motoboy como ponto de partida, o endereço de coleta como parada e o endereço de destino como destino final. O painel não expõe valor nem forma de pagamento do pedido.
 
 A segunda migração adiciona `pickup_courier_id` e `return_courier_id` para preservar separadamente quem realizou a coleta e quem realizou a entrega final. Assim, o histórico continua disponível mesmo depois que `courier_id` é liberado para a próxima etapa.
+
+## Ícone do aplicativo e instalação na tela inicial
+
+O projeto inclui ícones específicos para navegador, Android/PWA e iOS em `public/` e `assets/`. Para publicar no GitHub Pages, use o workflow incluído em `.github/workflows/deploy.yml` ou execute localmente:
+
+```bash
+npm ci
+npm run build:web
+```
+
+O comando `build:web` executa `expo export --platform web` e injeta as referências ao manifest e aos ícones no `dist/index.html`. No celular, depois da publicação, remova o atalho antigo e adicione o LavaJá novamente à tela inicial para atualizar o ícone.

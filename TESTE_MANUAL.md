@@ -1,30 +1,16 @@
-# Teste manual — Motoboy
+# Testes manuais desta atualização
 
-## Configuração do banco
+## Meus pedidos
+1. Entre com uma conta de cliente.
+2. Abra **Meus pedidos**.
+3. Confirme que **Atualizar pedidos** e **Fazer novo pedido** aparecem lado a lado no topo.
+4. Toque em **Fazer novo pedido** e confirme que abre o fluxo de criação de pedido.
+5. Toque em **Atualizar pedidos** e confirme que a lista atualiza sem travar.
+6. Entre com uma conta de lavanderia e confirme que não aparece o botão de novo pedido.
 
-Execute no SQL Editor do Supabase, nesta ordem:
-
-1. `supabase/migrations/20261111_motoboy_deliveries.sql` (se ainda não tiver executado).
-2. `supabase/migrations/20261112_motoboy_dashboard_history.sql`.
-
-A segunda migração atualiza as funções RPC usadas pelo painel e preserva a identificação do motoboy responsável pela coleta e pelo retorno.
-
-## Teste do painel
-
-1. Entre com uma conta do tipo **Motoboy**.
-2. Confira o Dashboard e os contadores.
-3. Abra **Disponíveis** e escolha uma corrida.
-4. Toque em **Ver detalhes** e confira cliente, lavanderia, telefones, endereços, serviço, agendamento e observações.
-5. Feche os detalhes e toque em **Ver rota**. O Google Maps deve abrir usando a localização atual como origem, o local de coleta como parada e o destino como destino final.
-6. Aceite a corrida e confira que ela aparece em **Em andamento**.
-7. Confirme a coleta no cliente e depois a entrega na lavanderia.
-8. Aguarde a lavanderia marcar o pedido como pronto.
-9. Aceite a corrida de retorno, abra os detalhes/rota e confirme a entrega final.
-10. Abra **Histórico** e confira o pedido finalizado.
-11. Volte ao Dashboard e confira os contadores atualizados.
-
-## Observações
-
-- O histórico novo começa a registrar as participações após a segunda migração. Corridas antigas concluídas antes da criação dos campos de histórico não podem ser atribuídas retroativamente com certeza.
-- O motoboy vê somente informações operacionais necessárias para executar a entrega; valores e forma de pagamento não são retornados pela função RPC.
-- Para testar navegação, use um dispositivo com Google Maps ou navegador configurado. No computador, o link abre a versão web do Google Maps.
+## Ícone / PWA
+1. Execute `npm ci` e `npm run build:web` ou publique pelo GitHub Actions.
+2. Confira se o diretório `dist` contém `manifest.webmanifest`, `favicon.ico`, `favicon-32.png`, `apple-touch-icon.png` e `icons/icon-192.png` / `icons/icon-512.png`.
+3. Abra o site publicado no Android e use **Adicionar à tela inicial** / **Instalar app**.
+4. No iPhone, abra no Safari, toque em Compartilhar e escolha **Adicionar à Tela de Início**.
+5. Se o site já estava instalado, remova o atalho antigo antes de adicioná-lo novamente, pois o sistema pode manter o ícone antigo em cache.

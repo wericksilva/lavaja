@@ -20,6 +20,17 @@
     ],
     "experiments": {
       "baseUrl": "/lavaja"
+    },
+    "icon": "./assets/icon.png",
+    "web": {
+      "bundler": "metro",
+      "favicon": "./public/favicon-48.png",
+      "name": "LavaJá",
+      "shortName": "LavaJá",
+      "themeColor": "#0878E8",
+      "backgroundColor": "#F4F8FC",
+      "display": "standalone",
+      "orientation": "portrait"
     }
   }
 }

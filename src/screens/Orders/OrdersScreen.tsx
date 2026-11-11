@@ -165,23 +165,36 @@ export default function OrdersScreen({
           Veja o andamento e o histórico dos seus pedidos.
         </Text>
 
-        <TouchableOpacity
-          style={styles.refreshButton}
-          activeOpacity={0.75}
-          disabled={refreshing}
-          onPress={async () => {
-            if (refreshing) return;
-            setRefreshing(true);
-            try {
-              await onRefreshOrders();
-            } finally {
-              setRefreshing(false);
-            }
-          }}
-        >
-          {refreshing ? <ActivityIndicator size="small" color={C.blue} /> : <Ionicons name="refresh-outline" size={18} color={C.blue} />}
-          <Text style={styles.refreshButtonText}>{refreshing ? 'Atualizando...' : 'Atualizar pedidos'}</Text>
-        </TouchableOpacity>
+        <View style={[styles.topActions, isStore && styles.topActionsStore]}>
+          <TouchableOpacity
+            style={[styles.refreshButton, !isStore && styles.topActionButton]}
+            activeOpacity={0.75}
+            disabled={refreshing}
+            onPress={async () => {
+              if (refreshing) return;
+              setRefreshing(true);
+              try {
+                await onRefreshOrders();
+              } finally {
+                setRefreshing(false);
+              }
+            }}
+          >
+            {refreshing ? <ActivityIndicator size="small" color={C.blue} /> : <Ionicons name="refresh-outline" size={18} color={C.blue} />}
+            <Text style={styles.refreshButtonText}>{refreshing ? 'Atualizando...' : 'Atualizar pedidos'}</Text>
+          </TouchableOpacity>
+
+          {!isStore && (
+            <TouchableOpacity
+              style={[styles.newOrder, styles.topActionButton]}
+              onPress={onNewOrder}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="add-circle-outline" size={19} color={C.white} />
+              <Text style={styles.newOrderText}>Fazer novo pedido</Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         {orders.length > 0 && (
           <View style={styles.filterPanel}>
@@ -461,21 +474,6 @@ export default function OrdersScreen({
 
        
 
-        {!isStore && (
-          <TouchableOpacity
-            style={styles.newOrder}
-            onPress={onNewOrder}
-            activeOpacity={0.8}
-          >
-            <Ionicons
-              name="add-circle-outline"
-              size={20}
-              color={C.white}
-            />
-            <Text style={styles.newOrderText}>Fazer novo pedido</Text>
-          </TouchableOpacity>
-        )}
-
         <Text style={styles.demoNote}>
           Seus pedidos são carregados da sua conta no LavaJá.
         </Text>
@@ -681,8 +679,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 4,
   },
+  topActions: {
+    flexDirection: 'row',
+    alignItems: 'stretch',
+    gap: 10,
+    marginBottom: 12,
+  },
+  topActionsStore: {
+    justifyContent: 'flex-end',
+  },
+  topActionButton: {
+    flex: 1,
+    minHeight: 44,
+    marginBottom: 0,
+    marginTop: 0,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+    borderRadius: 12,
+  },
   refreshButton: {
-    alignSelf: 'flex-end',
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -692,7 +708,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: C.paleBlue,
   },
-  refreshButtonText: { color: C.blue, fontSize: 12, fontWeight: '800' },
+  refreshButtonText: { color: C.blue, fontSize: 11, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
   status: {
     paddingHorizontal: 9,
     paddingVertical: 6,
@@ -875,8 +891,10 @@ const styles = StyleSheet.create({
   },
   newOrderText: {
     color: C.white,
-    fontSize: 14,
+    fontSize: 11,
     fontWeight: '800',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   demoNote: {
     color: C.muted,

@@ -32,3 +32,22 @@ Observação: a quantidade e a média dependem de a tabela `reviews` já conter 
 - Histórico persistente por trecho com `pickup_courier_id` e `return_courier_id`.
 - A RPC do motoboy não retorna valor nem forma de pagamento do pedido.
 - Nova migração: `supabase/migrations/20261112_motoboy_dashboard_history.sql`.
+
+## Melhorias desta atualização
+
+### Meus pedidos (cliente)
+- Os botões **Atualizar pedidos** e **Fazer novo pedido** agora aparecem juntos no topo da tela.
+- O botão antigo de novo pedido no final da lista foi removido para evitar repetição e facilitar o acesso.
+- Para contas de lavanderia, o botão de novo pedido não é exibido.
+
+### Ícone e instalação na tela inicial
+- Criado um ícone oficial do LavaJá em alta resolução, com versões para favicon, Android/PWA e Apple touch icon.
+- Configurado `app.json` com ícone do aplicativo e metadados web.
+- Adicionado `public/manifest.webmanifest` com nome, cores, modo standalone e ícones 192x192 e 512x512.
+- Adicionado `scripts/inject-pwa.mjs` para incluir manifest, favicon e metadados iOS no HTML exportado.
+- O workflow do GitHub Pages agora executa `npm run build:web`, que exporta o site e aplica as configurações PWA automaticamente.
+
+### Publicação
+- Faça commit e push dos arquivos para `master` (ou `main`).
+- Aguarde o workflow **Deploy LavaJa to GitHub Pages** concluir.
+- No celular, remova o atalho antigo da tela inicial e adicione o site novamente para atualizar o ícone já armazenado pelo navegador.
