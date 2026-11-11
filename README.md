@@ -69,3 +69,25 @@ A regra é validada pela função `cancel_order` no banco, e não apenas pela in
 - O chat exige Realtime habilitado no projeto Supabase.
 - O push precisa de build nativo e credenciais configuradas; a lista interna de notificações não depende de permissões de push.
 - Não compartilhe `.env`, chaves privadas ou `service_role`.
+
+
+## Configuração local
+
+Copie `.env.example` para `.env` e preencha `EXPO_PUBLIC_SUPABASE_URL` e `EXPO_PUBLIC_SUPABASE_ANON_KEY` com os dados do seu projeto Supabase. O arquivo `.env` com credenciais locais não é distribuído no ZIP.
+
+## Contas de motoboy e fluxo de entregas
+
+Esta versão inclui o perfil **Motoboy**. Antes de cadastrar ou liberar uma conta desse tipo, execute o arquivo `supabase/migrations/20261111_motoboy_deliveries.sql` no **SQL Editor** do Supabase. A migração amplia o tipo de conta permitido, adiciona os campos logísticos aos pedidos e cria as funções RPC seguras usadas pelo aplicativo.
+
+### Fluxo operacional
+
+1. A lavanderia confirma/agende a coleta do pedido.
+2. A corrida de coleta aparece em **Entregas disponíveis** para motoboys.
+3. O motoboy aceita a corrida, coleta as roupas no endereço do cliente e confirma a coleta.
+4. O motoboy entrega as roupas na lavanderia e confirma a chegada. A corrida de ida é encerrada.
+5. A lavanderia processa o pedido normalmente e marca a etapa **Pronto para entrega**.
+6. O pedido aparece como corrida de retorno disponível. Um motoboy aceita, retira as roupas na lavanderia e confirma a entrega final ao cliente.
+
+O motoboy consulta os dados operacionais por funções RPC: nome/telefone dos contatos, endereços, serviço, agendamento e instruções. Ele não recebe os dados de pagamento nem acesso geral à tabela de pedidos. A aceitação e as mudanças de etapa são validadas no banco e não dependem apenas da interface.
+
+> Importante: no painel da lavanderia, use **Pronto para entrega** como última etapa da lavanderia. A etapa **Pedido entregue** passa a ser confirmada pelo motoboy depois da entrega ao cliente.

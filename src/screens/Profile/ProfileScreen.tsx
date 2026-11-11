@@ -26,13 +26,14 @@ type Props = {
   phone: string;
   address: string;
   isStore: boolean;
+  isCourier?: boolean;
   navigate: Navigate;
   onSave: (values: ProfileValues) => Promise<boolean>;
   onLogout: () => Promise<void>;
 };
 
 export default function ProfileScreen({
-  name, email, phone, address, isStore, navigate, onSave, onLogout,
+  name, email, phone, address, isStore, isCourier = false, navigate, onSave, onLogout,
 }: Props) {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,7 +107,7 @@ export default function ProfileScreen({
 
   const goHome = () => {
     if (editing) cancelEditing();
-    navigate('home');
+    navigate(isCourier ? 'deliveries' : 'home');
   };
 
   return (
@@ -115,12 +116,12 @@ export default function ProfileScreen({
       <Header title="Meu perfil" onBack={goHome} onHome={goHome} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <View style={styles.profileHeader}>
-          <View style={styles.avatar}><Ionicons name={isStore ? 'storefront-outline' : 'person'} size={42} color={C.blue} /></View>
-          <Text style={styles.userName}>{name || (isStore ? 'Minha lavanderia' : 'Cliente LavaJá')}</Text>
+          <View style={styles.avatar}><Ionicons name={isStore ? 'storefront-outline' : isCourier ? 'bicycle-outline' : 'person'} size={42} color={C.blue} /></View>
+          <Text style={styles.userName}>{name || (isStore ? 'Minha lavanderia' : isCourier ? 'Motoboy LavaJá' : 'Cliente LavaJá')}</Text>
           <Text style={styles.userEmail}>{email || 'E-mail não informado'}</Text>
           <View style={styles.memberBadge}>
             <Ionicons name="checkmark-circle" size={15} color={C.green} />
-            <Text style={styles.memberText}>{isStore ? 'Parceiro LavaJá' : 'Cliente LavaJá'}</Text>
+            <Text style={styles.memberText}>{isStore ? 'Parceiro LavaJá' : isCourier ? 'Entregador LavaJá' : 'Cliente LavaJá'}</Text>
           </View>
         </View>
 
@@ -159,8 +160,8 @@ export default function ProfileScreen({
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>Endereço padrão</Text>
-        <View style={styles.card}>
+        {!isCourier && <Text style={styles.sectionTitle}>Endereço padrão</Text>}
+        {!isCourier && <View style={styles.card}>
           <View style={styles.field}>
             <View style={styles.fieldIcon}><Ionicons name="location-outline" size={21} color={C.blue} /></View>
             <View style={styles.fieldContent}>
@@ -168,7 +169,7 @@ export default function ProfileScreen({
               {editing ? <TextInput value={draftAddress} onChangeText={setDraftAddress} style={[styles.input, styles.addressInput]} placeholder="Rua, número, bairro e complemento" multiline /> : <Text style={styles.value}>{address || 'Nenhum endereço cadastrado'}</Text>}
             </View>
           </View>
-        </View>
+        </View>}
 
         {editing && (
           <View style={styles.editActions}>
@@ -183,9 +184,9 @@ export default function ProfileScreen({
         )}
 
         <Text style={styles.sectionTitle}>Minha conta</Text>
-        <TouchableOpacity style={styles.option} onPress={() => navigate('orders')}>
+        <TouchableOpacity style={styles.option} onPress={() => navigate(isCourier ? 'deliveries' : 'orders')}>
           <Ionicons name="receipt-outline" size={21} color={C.blue} />
-          <Text style={styles.optionText}>{isStore ? 'Pedidos recebidos' : 'Meus pedidos'}</Text>
+          <Text style={styles.optionText}>{isCourier ? 'Minhas entregas' : isStore ? 'Pedidos recebidos' : 'Meus pedidos'}</Text>
           <Ionicons name="chevron-forward" size={19} color={C.muted} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.option} onPress={() => navigate('helpSupport')}>
@@ -197,11 +198,11 @@ export default function ProfileScreen({
           {loggingOut ? <ActivityIndicator color="#D64545" /> : <Ionicons name="log-out-outline" size={21} color="#D64545" />}
           <Text style={styles.logoutText}>{loggingOut ? 'Saindo...' : 'Sair da conta'}</Text>
         </TouchableOpacity>
-        <Text style={styles.version}>LavaJá • Sua lavanderia, sem sair de casa.</Text>
+        <Text style={styles.version}>{isCourier ? 'LavaJá • Entregas com praticidade e segurança.' : 'LavaJá • Sua lavanderia, sem sair de casa.'}</Text>
       </ScrollView>
       <View style={styles.bottomNav}>
         <TouchableOpacity style={styles.navItem} onPress={goHome}><Ionicons name="home-outline" size={21} color={C.muted} /><Text style={styles.navText}>Início</Text></TouchableOpacity>
-        <TouchableOpacity style={styles.navItem} onPress={() => navigate('orders')}><Ionicons name="receipt-outline" size={21} color={C.muted} /><Text style={styles.navText}>Pedidos</Text></TouchableOpacity>
+        <TouchableOpacity style={styles.navItem} onPress={() => navigate(isCourier ? 'deliveries' : 'orders')}><Ionicons name="receipt-outline" size={21} color={C.muted} /><Text style={styles.navText}>{isCourier ? 'Entregas' : 'Pedidos'}</Text></TouchableOpacity>
         <TouchableOpacity style={styles.navItem} onPress={() => navigate('helpSupport')}><Ionicons name="help-circle-outline" size={21} color={C.muted} /><Text style={styles.navText}>Ajuda</Text></TouchableOpacity>
         <View style={styles.navItem}><Ionicons name="person" size={21} color={C.blue} /><Text style={[styles.navText, styles.navTextActive]}>Perfil</Text></View>
       </View>

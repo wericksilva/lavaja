@@ -18,7 +18,8 @@ export type Screen =
   | 'services'
   | 'chat'
   | 'reports'
-  | 'notifications';
+  | 'notifications'
+  | 'deliveries';
 
 export type Service = string;
 

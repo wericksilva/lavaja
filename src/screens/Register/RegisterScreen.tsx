@@ -18,7 +18,7 @@ import Header from '../../components/Header';
 import PrimaryButton from '../../components/PrimaryButton';
 import type { Navigate } from '../../types';
 
-export type AccountType = 'client' | 'store';
+export type AccountType = 'client' | 'store' | 'motoboy';
 
 type Props = {
   name: string;
@@ -100,6 +100,7 @@ export default function RegisterScreen({
 
   const isClientSelected = accountType === 'client';
   const isStoreSelected = accountType === 'store';
+  const isCourierSelected = accountType === 'motoboy';
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -111,7 +112,7 @@ export default function RegisterScreen({
             <Ionicons name="person-add-outline" size={28} color={C.blue} />
           </View>
           <Text style={styles.pageHeadline}>Vamos facilitar sua rotina.</Text>
-          <Text style={styles.pageSub}>Crie sua conta para acompanhar suas roupas em cada etapa.</Text>
+          <Text style={styles.pageSub}>{accountType === 'motoboy' ? 'Crie sua conta para aceitar corridas e realizar entregas.' : 'Crie sua conta para acompanhar suas roupas em cada etapa.'}</Text>
 
           <Text style={localStyles.sectionTitle}>Como você deseja utilizar o LavaJá?</Text>
           <View style={localStyles.optionsContainer}>
@@ -127,9 +128,15 @@ export default function RegisterScreen({
               <Text style={[localStyles.optionTitle, isStoreSelected && localStyles.optionTitleSelected]}>Sou lavanderia</Text>
               <Text style={localStyles.optionDescription}>Quero gerenciar pedidos</Text>
             </TouchableOpacity>
+            <TouchableOpacity activeOpacity={0.75} onPress={() => setAccountType('motoboy')} style={[localStyles.accountOption, isCourierSelected && localStyles.accountOptionSelected]}>
+              {isCourierSelected && <View style={localStyles.checkIcon}><Ionicons name="checkmark-circle" size={19} color={C.blue} /></View>}
+              <Ionicons name="bicycle-outline" size={30} color={isCourierSelected ? C.blue : '#64748B'} />
+              <Text style={[localStyles.optionTitle, isCourierSelected && localStyles.optionTitleSelected]}>Sou motoboy</Text>
+              <Text style={localStyles.optionDescription}>Quero fazer entregas</Text>
+            </TouchableOpacity>
           </View>
 
-          <Field label={accountType === 'store' ? 'Nome da lavanderia ou responsável' : 'Nome completo'} value={name} onChangeText={(value) => { setName(value); if (nameError) setNameError(''); }} placeholder={accountType === 'store' ? 'Nome da sua lavanderia' : 'Como podemos te chamar?'} icon="person-outline" />
+          <Field label={accountType === 'store' ? 'Nome da lavanderia ou responsável' : 'Nome completo'} value={name} onChangeText={(value) => { setName(value); if (nameError) setNameError(''); }} placeholder={accountType === 'store' ? 'Nome da sua lavanderia' : accountType === 'motoboy' ? 'Seu nome completo' : 'Como podemos te chamar?'} icon="person-outline" />
           {!!nameError && <Text style={validationStyles.error}>{nameError}</Text>}
 
           <Field label="E-mail" value={email} onChangeText={(value) => { setEmail(value); if (emailError) setEmailError(''); }} placeholder="voce@email.com" keyboardType="email-address" icon="mail-outline" />
@@ -151,8 +158,8 @@ export default function RegisterScreen({
 
 const localStyles = {
   sectionTitle: { fontSize: 14, fontWeight: '700' as const, color: '#253247', marginTop: 8, marginBottom: 12 },
-  optionsContainer: { flexDirection: 'row' as const, gap: 12, marginBottom: 22 },
-  accountOption: { flex: 1, minHeight: 120, paddingVertical: 16, paddingHorizontal: 8, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center' as const, justifyContent: 'center' as const, position: 'relative' as const },
+  optionsContainer: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 10, marginBottom: 22 },
+  accountOption: { flexGrow: 1, flexBasis: '30%' as const, minWidth: 90, minHeight: 120, paddingVertical: 16, paddingHorizontal: 8, borderRadius: 14, borderWidth: 1.5, borderColor: '#E2E8F0', backgroundColor: '#FFFFFF', alignItems: 'center' as const, justifyContent: 'center' as const, position: 'relative' as const },
   accountOptionSelected: { borderColor: C.blue, backgroundColor: '#EFF6FF' },
   checkIcon: { position: 'absolute' as const, top: 7, right: 7 },
   optionTitle: { fontSize: 14, fontWeight: '700' as const, color: '#253247', marginTop: 9 },

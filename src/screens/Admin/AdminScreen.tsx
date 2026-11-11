@@ -30,7 +30,7 @@ const steps = [
   'Lavagem',
   'Secagem',
   'Pronto para entrega',
-  'Pedido entregue',
+  'Entrega final (motoboy)',
 ];
 
 const getValidStep = (currentStep: number): number => {
@@ -239,13 +239,15 @@ export default function AdminScreen({
                     <TouchableOpacity
                       key={`${order.id}-${index}`}
                       activeOpacity={0.7}
+                      disabled={index === 5}
                       style={[
                         styles.stepOption,
                         selected && styles.stepSelected,
+                        index === 5 && { opacity: 0.45 },
                       ]}
-                      onPress={() =>
-                        onChangeOrder(`${order.id}:${index}`)
-                      }
+                      onPress={() => {
+                        if (index !== 5) onChangeOrder(`${order.id}:${index}`);
+                      }}
                     >
                       <Ionicons
                         name={

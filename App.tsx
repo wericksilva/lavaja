@@ -38,6 +38,7 @@ import { paymentToDbValue } from './src/utils/payment';
 import ChatScreen from './src/screens/Chat/ChatScreen';
 import ReportsScreen from './src/screens/Reports/ReportsScreen';
 import NotificationsScreen from './src/screens/Notifications/NotificationsScreen';
+import MotoboyScreen from './src/screens/Motoboy/MotoboyScreen';
 
 Notifications.setNotificationHandler({ handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }) });
 
@@ -164,7 +165,7 @@ if (
             name: String(metadata.name ?? ''),
             email: session.user.email ?? '',
             phone: String(metadata.phone ?? ''),
-            account_type: metadata.account_type === 'store' ? 'store' : 'client',
+            account_type: metadata.account_type === 'store' ? 'store' : metadata.account_type === 'motoboy' ? 'motoboy' : 'client',
             default_address: '',
           }, { onConflict: 'id' })
           .select('id, name, email, phone, account_type, default_address')
@@ -190,7 +191,7 @@ if (
         return;
       }
 
-      const type: AccountType = currentProfile.account_type === 'store' ? 'store' : 'client';
+      const type: AccountType = currentProfile.account_type === 'store' ? 'store' : currentProfile.account_type === 'motoboy' ? 'motoboy' : 'client';
       setName(currentProfile.name ?? '');
       setEmail(session.user.email ?? '');
       setPhone(currentProfile.phone ?? '');
@@ -207,7 +208,7 @@ await loadWorkspace(
 
 if (!mounted || passwordRecoveryRef.current) return;
 
-setScreen('home');
+setScreen(type === 'motoboy' ? 'deliveries' : 'home');
     };
     void restoreSession();
     return () => { mounted = false; };
@@ -353,6 +354,10 @@ setScreen('home');
     setDashboardData({ receivedToday: 0, pending: 0, inProgress: 0, completedMonth: 0, ordersValueMonth: 0, reviewCount: 0, averageRating: 0, weeklyRevenue: [] });
 
     try {
+      if (type === 'motoboy') {
+        return;
+      }
+
       if (type === 'store') {
         const laundry = await ensureStoreLaundry(userId, displayName, userPhone);
         setStoreLaundryId(laundry.id);
@@ -427,7 +432,7 @@ setScreen('home');
 
   // Retorna à tela inicial sem encerrar a sessão
   const goHome = () => {
-    setScreen('home');
+    setScreen(accountType === 'motoboy' ? 'deliveries' : 'home');
   };
 
   const refreshOrders = async () => {
@@ -564,6 +569,11 @@ const updateOrderStep = async (value: string) => {
 
   if (!Number.isInteger(newStep) || newStep < 0 || newStep > 5) {
     showAppMessage('Erro', 'Etapa inválida.');
+    return;
+  }
+
+  if (newStep === 5) {
+    showAppMessage('Entrega pelo motoboy', 'A lavanderia deve marcar o pedido como Pronto para entrega. A conclusão será confirmada pelo motoboy após entregar as roupas ao cliente.');
     return;
   }
 
@@ -852,7 +862,7 @@ if (error) {
       const metadata = data.user.user_metadata ?? {};
       const recoveredName = String(metadata.name ?? '');
       const recoveredPhone = String(metadata.phone ?? '');
-      const recoveredType: AccountType = metadata.account_type === 'store' ? 'store' : 'client';
+      const recoveredType: AccountType = metadata.account_type === 'store' ? 'store' : metadata.account_type === 'motoboy' ? 'motoboy' : 'client';
 
       const { data: insertedProfile, error: insertProfileError } = await supabase
         .from('profiles')
@@ -881,7 +891,7 @@ if (error) {
       profile = insertedProfile;
     }
 
-    const type: AccountType = profile.account_type === 'store' ? 'store' : 'client';
+    const type: AccountType = profile.account_type === 'store' ? 'store' : profile.account_type === 'motoboy' ? 'motoboy' : 'client';
     setName(profile.name ?? '');
     setEmail(data.user.email ?? normalizedEmail);
     setPhone(profile.phone ?? '');
@@ -889,7 +899,7 @@ if (error) {
     setAccountType(type);
     await loadWorkspace(data.user.id, type, profile.name ?? '', profile.phone ?? '');
     setPassword('');
-    setScreen('home');
+    setScreen(type === 'motoboy' ? 'deliveries' : 'home');
   };
 
   // Cadastro no Supabase Auth. O trigger SQL cria o registro em profiles.
@@ -1112,6 +1122,10 @@ if (error) {
   };
 
   switch (screen) {
+    case 'deliveries':
+      if (accountType !== 'motoboy') return null;
+      return <MotoboyScreen onLogout={logout} onOpenProfile={() => setScreen('profile')} />;
+
     case 'forgotPassword':
       return (
         <ForgotPasswordScreen
@@ -1273,6 +1287,7 @@ if (error) {
           phone={phone}
           address={address}
           isStore={accountType === 'store'}
+          isCourier={accountType === 'motoboy'}
           navigate={setScreen}
           onSave={saveProfile}
           onLogout={logout}
