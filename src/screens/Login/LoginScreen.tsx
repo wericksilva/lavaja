@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import {
   SafeAreaView,
@@ -27,7 +28,7 @@ type Props = {
   setPassword: (value: string) => void;
   login: () => void | Promise<void>;
   navigate: Navigate;
-  showHome: () => void;
+  onLogoPress: () => void | Promise<void>;
 };
 
 const MAX_ATTEMPTS = 3;
@@ -39,7 +40,7 @@ export default function LoginScreen({
   setPassword,
   login,
   navigate,
-  showHome,
+  onLogoPress,
 }: Props) {
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
@@ -49,14 +50,12 @@ export default function LoginScreen({
 
   const remainingAttempts = MAX_ATTEMPTS - attempts;
 
+  // Clique na logo para voltar ao início.
   const handleLogoPress = () => {
-    if (Platform.OS === 'web') {
-      window.location.reload();
-    } else {
-      showHome();
-    }
+    void onLogoPress();
   };
 
+  // Validação e autenticação.
   const validateAndLogin = async () => {
     if (blocked || loading) return;
 
@@ -68,7 +67,9 @@ export default function LoginScreen({
     if (!email.trim()) {
       setEmailError('O e-mail é obrigatório.');
       valid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    } else if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
+    ) {
       setEmailError('Informe um e-mail válido.');
       valid = false;
     }
@@ -85,7 +86,6 @@ export default function LoginScreen({
     try {
       await login();
 
-      // Login realizado com sucesso.
       setAttempts(0);
       setBlocked(false);
     } catch (error) {
@@ -95,6 +95,7 @@ export default function LoginScreen({
 
       if (newAttempts >= MAX_ATTEMPTS) {
         setBlocked(true);
+
         setPasswordError(
           'Acesso bloqueado após 3 tentativas incorretas. Recupere sua senha para entrar novamente.'
         );
@@ -136,6 +137,7 @@ export default function LoginScreen({
     }
   };
 
+  // Recuperação de senha.
   const handleForgotPassword = () => {
     navigate('forgotPassword');
   };
@@ -157,7 +159,7 @@ export default function LoginScreen({
               onPress={handleLogoPress}
               activeOpacity={0.7}
               accessibilityRole="button"
-              accessibilityLabel="Logo LavaJá"
+              accessibilityLabel="Logo LavaJá - voltar ao início"
             >
               <Brand />
             </TouchableOpacity>
@@ -166,10 +168,18 @@ export default function LoginScreen({
               <View style={styles.bubbleOne} />
               <View style={styles.bubbleTwo} />
 
-              <Ionicons name="shirt" size={74} color={C.blue} />
+              <Ionicons
+                name="shirt"
+                size={74}
+                color={C.blue}
+              />
 
               <View style={styles.heroCheck}>
-                <Ionicons name="checkmark" size={19} color="#fff" />
+                <Ionicons
+                  name="checkmark"
+                  size={19}
+                  color="#fff"
+                />
               </View>
             </View>
 
@@ -183,7 +193,9 @@ export default function LoginScreen({
           </View>
 
           <View style={styles.authCard}>
-            <Text style={styles.cardTitle}>Bem-vindo de volta</Text>
+            <Text style={styles.cardTitle}>
+              Bem-vindo de volta
+            </Text>
 
             <Text style={styles.cardSubtitle}>
               Entre para agendar sua próxima coleta.

@@ -44,6 +44,7 @@ Notifications.setNotificationHandler({ handleNotification: async () => ({ should
 export default function App() {
   // Navegação
   const [screen, setScreen] = useState<Screen>('login');
+  const [loginScreenKey, setLoginScreenKey] = useState(0);
   const passwordRecoveryRef = useRef(false);
 
   // Avaliações dos pedidos
@@ -719,15 +720,24 @@ const updateOrderStep = async (value: string) => {
     }
   };
 
+  // Sair da conta normalmente.
   const logout = async () => {
     if (profileId && pushToken) {
-      await supabase.from('expo_push_tokens').delete().eq('user_id', profileId).eq('expo_push_token', pushToken);
+      await supabase
+        .from('expo_push_tokens')
+        .delete()
+        .eq('user_id', profileId)
+        .eq('expo_push_token', pushToken);
     }
+
     const { error } = await supabase.auth.signOut();
+
     if (error) {
       showAppMessage('Não foi possível sair', error.message);
       return;
     }
+
+    passwordRecoveryRef.current = false;
     setProfileId('');
     setPushToken('');
     setStoreLaundryId('');
@@ -742,7 +752,49 @@ const updateOrderStep = async (value: string) => {
     setAddress('');
     setInstructions('');
     setAccountType('client');
+    setLoginScreenKey((current) => current + 1);
     setScreen('login');
+  };
+
+  // Clicar na logo encerra a sessão e retorna à tela de login.
+  const resetToLogin = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        showAppMessage('Erro ao reiniciar', error.message);
+        return;
+      }
+
+      passwordRecoveryRef.current = false;
+      setProfileId('');
+      setPushToken('');
+      setStoreLaundryId('');
+      setOrders([]);
+      setReviews([]);
+      setAvailableLaundries([]);
+      setSelectedLaundry(null);
+      setName('');
+      setEmail('');
+      setPhone('');
+      setPassword('');
+      setAddress('');
+      setInstructions('');
+      setAccountType('client');
+      setLoginScreenKey((current) => current + 1);
+      setScreen('login');
+
+      if (Platform.OS === 'web') {
+        window.location.reload();
+      }
+    } catch (error) {
+      showAppMessage(
+        'Erro ao reiniciar aplicativo',
+        error instanceof Error
+          ? error.message
+          : 'Não foi possível voltar ao login.'
+      );
+    }
   };
 
   // Login com Supabase Auth e recuperação do perfil, se necessário
@@ -1230,15 +1282,17 @@ if (error) {
     case 'login':
       return (
         <LoginScreen
+          key={loginScreenKey}
           email={email}
           setEmail={setEmail}
           password={password}
           setPassword={setPassword}
           login={login}
           navigate={setScreen}
-          showHome={goHome}
+          onLogoPress={resetToLogin}
         />
       );
+
 
     case 'register':
       return (
@@ -1354,16 +1408,18 @@ if (error) {
         />
       );
 
+    
     default:
       return (
         <LoginScreen
+          key={loginScreenKey}
           email={email}
           setEmail={setEmail}
           password={password}
           setPassword={setPassword}
           login={login}
           navigate={setScreen}
-          showHome={goHome}
+          onLogoPress={resetToLogin}
         />
       );
   }
